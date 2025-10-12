@@ -1,25 +1,25 @@
 import { loadStations } from './stationLoader.js';
 
-type LineId = '1-Azul' | '2-Verde' | '3-Vermelha' | '4-Amarela' | '5-Lilás' | '15-Prata' | '8-Diamante' | '9-Esmeralda' | '10-Turquesa' | '11-Coral' | '12-Safira' | '13-Jade' | '7-Rubi';
+type LineId = string; // numeric string: '1', '2', '15'
 
 interface Line { id: LineId; name: string; color: string; }
 interface Station { id: string; name: string; lines: LineId[]; imageUrl?: string; }
 
 // Minimal dataset (bootstrap). Extend this list in the future.
-const LINES: Record<LineId, Line> = {
-  '1-Azul': { id: '1-Azul', name: 'Linha 1-Azul', color: '#0033a0' },
-  '2-Verde': { id: '2-Verde', name: 'Linha 2-Verde', color: '#00a651' },
-  '3-Vermelha': { id: '3-Vermelha', name: 'Linha 3-Vermelha', color: '#ee3124' },
-  '4-Amarela': { id: '4-Amarela', name: 'Linha 4-Amarela', color: '#ffc20e' },
-  '5-Lilás': { id: '5-Lilás', name: 'Linha 5-Lilás', color: '#7f3f98' },
-  '15-Prata': { id: '15-Prata', name: 'Linha 15-Prata', color: '#c0c0c0' },
-  '8-Diamante': { id: '8-Diamante', name: 'Linha 8-Diamante', color: '#8e8e8e' },
-  '9-Esmeralda': { id: '9-Esmeralda', name: 'Linha 9-Esmeralda', color: '#0f9d58' },
-  '10-Turquesa': { id: '10-Turquesa', name: 'Linha 10-Turquesa', color: '#30c6d9' },
-  '11-Coral': { id: '11-Coral', name: 'Linha 11-Coral', color: '#ff7f50' },
-  '12-Safira': { id: '12-Safira', name: 'Linha 12-Safira', color: '#26619c' },
-  '13-Jade': { id: '13-Jade', name: 'Linha 13-Jade', color: '#00a86b' },
-  '7-Rubi': { id: '7-Rubi', name: 'Linha 7-Rubi', color: '#c21807' },
+const LINES: Record<string, Line> = {
+  '1': { id: '1', name: 'Linha 1-Azul', color: '#0033a0' },
+  '2': { id: '2', name: 'Linha 2-Verde', color: '#00a651' },
+  '3': { id: '3', name: 'Linha 3-Vermelha', color: '#ee3124' },
+  '4': { id: '4', name: 'Linha 4-Amarela', color: '#ffc20e' },
+  '5': { id: '5', name: 'Linha 5-Lilás', color: '#7f3f98' },
+  '7': { id: '7', name: 'Linha 7-Rubi', color: '#c21807' },
+  '8': { id: '8', name: 'Linha 8-Diamante', color: '#8e8e8e' },
+  '9': { id: '9', name: 'Linha 9-Esmeralda', color: '#0f9d58' },
+  '10': { id: '10', name: 'Linha 10-Turquesa', color: '#30c6d9' },
+  '11': { id: '11', name: 'Linha 11-Coral', color: '#ff7f50' },
+  '12': { id: '12', name: 'Linha 12-Safira', color: '#26619c' },
+  '13': { id: '13', name: 'Linha 13-Jade', color: '#00a86b' },
+  '15': { id: '15', name: 'Linha 15-Prata', color: '#c0c0c0' },
 };
 
 let STATIONS: Station[] = [];

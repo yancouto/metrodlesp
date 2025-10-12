@@ -19,7 +19,7 @@ ORDER BY (?stationLabel)
 // (one per connecting line) into a single Station with unique LineId[] lines.
 
 // Local type shadows to avoid importing from index.ts. Keep in sync with index.ts if changed.
-export type LineId = '1-Azul' | '2-Verde' | '3-Vermelha' | '4-Amarela' | '5-Lilás' | '15-Prata' | '8-Diamante' | '9-Esmeralda' | '10-Turquesa' | '11-Coral' | '12-Safira' | '13-Jade' | '7-Rubi';
+export type LineId = string; // numeric string, e.g., '1', '2', '15'
 export interface Station { id: string; name: string; lines: LineId[]; imageUrl?: string; }
 
 // CSV parsing that supports quoted fields and commas inside quotes.
@@ -56,48 +56,20 @@ function slugify(ptName: string): string {
     .replace(/(^-|-$)/g, '');
 }
 
-// Map various Wikidata line labels to our LineId.
-const LINE_BY_NUMBER: Record<string, LineId> = {
-  '1': '1-Azul',
-  '2': '2-Verde',
-  '3': '3-Vermelha',
-  '4': '4-Amarela',
-  '5': '5-Lilás',
-  '7': '7-Rubi',
-  '8': '8-Diamante',
-  '9': '9-Esmeralda',
-  '10': '10-Turquesa',
-  '11': '11-Coral',
-  '12': '12-Safira',
-  '13': '13-Jade',
-  '15': '15-Prata',
-};
+const IGNORED_LINES = new Set([
+    "Ramal de São Paulo",
+]);
 
 function normalizeLineLabel(label: string): LineId | undefined {
-  if (!label) return undefined;
   const raw = label
     .replace(/\u2013|\u2014|–|—/g, '-')
     .replace(/linha\s*/i, '')
     .trim();
   // try to extract leading number
   const m = raw.match(/^(\d{1,2})\b/);
-  if (m && LINE_BY_NUMBER[m[1]]) return LINE_BY_NUMBER[m[1]];
-  // fallback by color keywords
-  const low = raw.toLowerCase();
-  if (low.includes('azul')) return '1-Azul';
-  if (low.includes('verde')) return '2-Verde';
-  if (low.includes('vermelh')) return '3-Vermelha';
-  if (low.includes('amarel')) return '4-Amarela';
-  if (low.includes('lil')) return '5-Lilás';
-  if (low.includes('prata') || low.includes('silver')) return '15-Prata';
-  if (low.includes('rubi')) return '7-Rubi';
-  if (low.includes('diamante')) return '8-Diamante';
-  if (low.includes('esmeralda')) return '9-Esmeralda';
-  if (low.includes('turquesa')) return '10-Turquesa';
-  if (low.includes('coral')) return '11-Coral';
-  if (low.includes('safira')) return '12-Safira';
-  if (low.includes('jade')) return '13-Jade';
-  return undefined;
+  if(m) return m[1];
+  if(IGNORED_LINES.has(label)) return undefined;
+  throw new Error(`Unknown line: ${raw}`);
 }
 
 let stationsCache: Station[] | null = null;
@@ -113,21 +85,24 @@ export async function loadStations(): Promise<Station[]> {
   const header = rows[0].map(h => h.trim());
   const idxStationLabel = header.indexOf('stationLabel');
   const idxLineLabel = header.indexOf('connecting_lineLabel');
+  const idxStationCode = header.indexOf('station_code');
   if (idxStationLabel === -1) throw new Error('CSV sem coluna stationLabel');
+  if (idxStationCode === -1) throw new Error('CSV sem coluna station_code');
   const map = new Map<string, Station>();
   for (let i = 1; i < rows.length; i++) {
     const r = rows[i];
     if (!r || !r.length) continue;
-    const name = (r[idxStationLabel] || '').trim();
-    if (!name) continue;
-    const id = slugify(name);
-    let entry = map.get(id);
-    if (!entry) { entry = { id, name, lines: [] as LineId[] }; map.set(id, entry); }
-    if (idxLineLabel !== -1) {
-      const lab = (r[idxLineLabel] || '').trim();
-      const mapped = normalizeLineLabel(lab);
-      if (mapped && !entry.lines.includes(mapped)) entry.lines.push(mapped);
-    }
+    const code = (r[idxStationCode] || '').trim();
+    if (!code) continue;
+    let name = (r[idxStationLabel] || '').trim();
+    if (/^Estação\b/i.test(name)) name = name.replace(/^Estação\s+/i, '').trim();
+    if(name.startsWith("Terminal Intermodal")) continue;
+    let entry = map.get(code);
+    if (!entry) { entry = { id: code, name, lines: [] as LineId[] }; map.set(code, entry); }
+  const lab = (r[idxLineLabel] || '').trim();
+  const mapped = normalizeLineLabel(lab);
+  if(!mapped) continue;
+  if (mapped && !entry.lines.includes(mapped)) entry.lines.push(mapped);
   }
   stationsCache = Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
   return stationsCache;
