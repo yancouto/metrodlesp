@@ -18,9 +18,7 @@ http://www.wikidata.org/entity/Q107232685,http://www.wikidata.org/entity/Q329431
 http://www.wikidata.org/entity/Q5002360,http://www.wikidata.org/entity/Q3308457,Linha 4 do Metrô de São Paulo,Point(-46.70814 -23.57182),BUT,Estação Butantã
 http://www.wikidata.org/entity/Q18475274,http://www.wikidata.org/entity/Q5430612,Linha 15 do Metrô de São Paulo,Point(-46.537678 -23.595354),CAD,Estação Camilo Haddad
 http://www.wikidata.org/entity/Q8076578,http://www.wikidata.org/entity/Q3308465,Linha 5 do Metrô de São Paulo,Point(-46.68251 -23.61881),CPB,Estação Campo Belo
-http://www.wikidata.org/entity/Q8076578,http://www.wikidata.org/entity/Q5430578,Linha 17 do Metrô de São Paulo,Point(-46.68251 -23.61881),CPB,Estação Campo Belo
 http://www.wikidata.org/entity/Q8076578,http://www.wikidata.org/entity/Q3308465,Linha 5 do Metrô de São Paulo,Point(-46.68251 -23.61881),S/D,Estação Campo Belo
-http://www.wikidata.org/entity/Q8076578,http://www.wikidata.org/entity/Q5430578,Linha 17 do Metrô de São Paulo,Point(-46.68251 -23.61881),S/D,Estação Campo Belo
 http://www.wikidata.org/entity/Q5028448,http://www.wikidata.org/entity/Q3308465,Linha 5 do Metrô de São Paulo,Point(-46.759148 -23.649374),CPL,Estação Campo Limpo
 http://www.wikidata.org/entity/Q5037175,http://www.wikidata.org/entity/Q3308465,Linha 5 do Metrô de São Paulo,Point(-46.768177 -23.659251),CPR,Estação Capão Redondo
 http://www.wikidata.org/entity/Q5037696,http://www.wikidata.org/entity/Q3362568,Linha 1 do Metrô de São Paulo,Point(-46.624904 -23.509662),CDU,Estação Carandiru
@@ -37,7 +35,6 @@ http://www.wikidata.org/entity/Q18475332,http://www.wikidata.org/entity/Q5430612
 http://www.wikidata.org/entity/Q5477606,http://www.wikidata.org/entity/Q3308457,Linha 4 do Metrô de São Paulo,Point(-46.684167 -23.566111),FRA,Estação Fradique Coutinho
 http://www.wikidata.org/entity/Q5563882,http://www.wikidata.org/entity/Q3308465,Linha 5 do Metrô de São Paulo,Point(-46.734247 -23.643964),GGR,Estação Giovanni Gronchi
 http://www.wikidata.org/entity/Q5615996,http://www.wikidata.org/entity/Q3294315,Linha 3 do Metrô de São Paulo,Point(-46.516553 -23.529292),VPA,Estação Guilhermina-Esperança
-http://www.wikidata.org/entity/Q8779002,http://www.wikidata.org/entity/Q3293620,Linha 6 do Metrô de São Paulo,Point(-46.652305555 -23.549138888),HIG,Estação Higienópolis-Mackenzie
 http://www.wikidata.org/entity/Q8779002,http://www.wikidata.org/entity/Q3308457,Linha 4 do Metrô de São Paulo,Point(-46.652305555 -23.549138888),HIG,Estação Higienópolis-Mackenzie
 http://www.wikidata.org/entity/Q7929982,http://www.wikidata.org/entity/Q3308465,Linha 5 do Metrô de São Paulo,Point(-46.64559 -23.59838),HSP,Estação Hospital São Paulo
 http://www.wikidata.org/entity/Q6541063,http://www.wikidata.org/entity/Q3362568,Linha 1 do Metrô de São Paulo,Point(-46.635654 -23.554772),LIB,Estação Japão - Liberdade
@@ -72,7 +69,6 @@ http://www.wikidata.org/entity/Q7420602,http://www.wikidata.org/entity/Q588499,L
 http://www.wikidata.org/entity/Q3065820,http://www.wikidata.org/entity/Q588499,Linha 2 do Metrô de São Paulo,Point(-46.677588 -23.550637),SUM,Estação Santuário Nossa Senhora de Fátima-Sumaré
 http://www.wikidata.org/entity/Q5244817,http://www.wikidata.org/entity/Q3362568,Linha 1 do Metrô de São Paulo,Point(-46.639345 -23.619133),SAU,Estação Saúde
 http://www.wikidata.org/entity/Q7665407,http://www.wikidata.org/entity/Q3362568,Linha 1 do Metrô de São Paulo,Point(-46.633806 -23.543914),BTO,Estação São Bento
-http://www.wikidata.org/entity/Q7665498,http://www.wikidata.org/entity/Q3293620,Linha 6 do Metrô de São Paulo,Point(-46.638653 -23.561892),JQM,Estação São Joaquim
 http://www.wikidata.org/entity/Q7665498,http://www.wikidata.org/entity/Q3362568,Linha 1 do Metrô de São Paulo,Point(-46.638653 -23.561892),JQM,Estação São Joaquim
 http://www.wikidata.org/entity/Q7665592,http://www.wikidata.org/entity/Q3362568,Linha 1 do Metrô de São Paulo,Point(-46.64075 -23.625609),JUD,Estação São Judas
 http://www.wikidata.org/entity/Q18475809,http://www.wikidata.org/entity/Q5430612,Linha 15 do Metrô de São Paulo,Point(-46.544644 -23.5889),SLU,Estação São Lucas
@@ -80,7 +76,6 @@ http://www.wikidata.org/entity/Q9290828,http://www.wikidata.org/entity/Q3308457,
 http://www.wikidata.org/entity/Q3132156,http://www.wikidata.org/entity/Q3294315,Linha 3 do Metrô de São Paulo,Point(-46.633522 -23.55059),PSE,Estação Sé
 http://www.wikidata.org/entity/Q3132156,http://www.wikidata.org/entity/Q3362568,Linha 1 do Metrô de São Paulo,Point(-46.633522 -23.55059),PSE,Estação Sé
 http://www.wikidata.org/entity/Q7688505,http://www.wikidata.org/entity/Q3294315,Linha 3 do Metrô de São Paulo,Point(-46.576184 -23.540314),TAT,Estação Tatuapé
-http://www.wikidata.org/entity/Q7688505,http://www.wikidata.org/entity/Q61001198,Ramal de São Paulo,Point(-46.576184 -23.540314),TAT,Estação Tatuapé
 http://www.wikidata.org/entity/Q7809083,http://www.wikidata.org/entity/Q3362568,Linha 1 do Metrô de São Paulo,Point(-46.631963 -23.530832),TRD,Estação Tiradentes
 http://www.wikidata.org/entity/Q3071513,http://www.wikidata.org/entity/Q588499,Linha 2 do Metrô de São Paulo,Point(-46.655127 -23.562549),TRI,Estação Trianon-Masp
 http://www.wikidata.org/entity/Q3309828,http://www.wikidata.org/entity/Q3362568,Linha 1 do Metrô de São Paulo,Point(-46.603226 -23.480065),TUC,Estação Tucuruvi
@@ -93,7 +88,6 @@ http://www.wikidata.org/entity/Q18475867,http://www.wikidata.org/entity/Q5430612
 http://www.wikidata.org/entity/Q5845376,http://www.wikidata.org/entity/Q3308465,Linha 5 do Metrô de São Paulo,Point(-46.745849 -23.640425),VBE,Estação Vila das Belezas
 http://www.wikidata.org/entity/Q111926727,http://www.wikidata.org/entity/Q3308465,Linha 5 do Metrô de São Paulo,Point(-46.720428 -23.655693),STA,Santo Amaro
 http://www.wikidata.org/entity/Q5170696,http://www.wikidata.org/entity/Q3294315,Linha 3 do Metrô de São Paulo,Point(-46.471159 -23.542207),ITQ,Terminal Intermodal Corinthians-Itaquera
-http://www.wikidata.org/entity/Q5170696,http://www.wikidata.org/entity/Q61001198,Ramal de São Paulo,Point(-46.471159 -23.542207),ITQ,Terminal Intermodal Corinthians-Itaquera
 http://www.wikidata.org/entity/Q5244789,http://www.wikidata.org/entity/Q3362568,Linha 1 do Metrô de São Paulo,Point(-46.640112 -23.647134),JAB,Terminal Intermodal Jabaquara
 http://www.wikidata.org/entity/Q7195875,http://www.wikidata.org/entity/Q3308457,Linha 4 do Metrô de São Paulo,Point(-46.70193 -23.56726),PIN,Terminal Intermodal Pinheiros
 http://www.wikidata.org/entity/Q48855691,http://www.wikidata.org/entity/Q5430612,Linha 15 do Metrô de São Paulo,Point(-46.50084 -23.61471),SAP,Terminal Intermodal Sapopemba

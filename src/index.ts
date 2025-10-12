@@ -121,6 +121,31 @@ function lineChipsHTML(items: { line: Line, match: boolean }[]) {
   return items.map(({ line, match }) => `<span class="line-chip ${match ? '' : 'miss'}" title="${line.name}" style="background:${line.color}"></span>`).join('');
 }
 
+// Known info from previous guesses vs the hidden solution
+function getKnownLineKnowledge(): { eliminated: Set<LineId>; confirmed: Set<LineId> } {
+  const eliminated = new Set<LineId>();
+  const confirmed = new Set<LineId>();
+  const solution = stationById(state.solutionId);
+  for (const gid of state.guesses) {
+    const g = stationById(gid);
+    for (const l of g.lines) {
+      if (solution.lines.includes(l)) confirmed.add(l);
+      else eliminated.add(l);
+    }
+  }
+  return { eliminated, confirmed };
+}
+
+function suggestionLineChipsHTML(station: Station, knowledge: { eliminated: Set<LineId>; confirmed: Set<LineId> }) {
+  const chips = station.lines.map((lid) => {
+    const line = LINES[lid];
+
+    const isMiss = knowledge.eliminated.has(lid);
+    return { line, match: !isMiss };
+  });
+  return lineChipsHTML(chips);
+}
+
 // Share
 function buildShare(state: GameState): string {
   const date = state.dateKey;
@@ -203,19 +228,55 @@ const suggestionsEl = document.getElementById('suggestions') as HTMLDivElement |
 function renderSuggestions() {
   if (!suggestionsEl) return;
   const q = guessInput.value.trim();
-  const items = q ? searchCandidates(q) : [];
-  if (!q || items.length === 0) {
+  if (!q) {
     suggestionsEl.innerHTML = '';
     suggestionsEl.style.display = 'none';
     return;
   }
-  const html = items.map(s => `<button type="button" class="suggestion-item" data-id="${s.id}">${s.name}</button>`).join('');
-  suggestionsEl.innerHTML = html;
+  const qn = normalize(q);
+  const knowledge = getKnownLineKnowledge();
+  // Name matches first
+  const nameMatches = STATIONS.filter(s => normalize(s.name).includes(qn));
+  // Determine which lines are being queried (by name or by number)
+  const lineHits: LineId[] = [];
+  (Object.keys(LINES) as LineId[]).forEach((id) => {
+    const l = LINES[id];
+    if (normalize(l.name).includes(qn) || normalize(String(l.id)).includes(qn)) lineHits.push(l.id);
+  });
+  // Build HTML
+  const seen = new Set<string>();
+  const parts: string[] = [];
+  // Render name matches (unique, sorted)
+  nameMatches.sort((a,b)=>a.name.localeCompare(b.name)).forEach(s => {
+    if (seen.has(s.id)) return; seen.add(s.id);
+    parts.push(`<button type="button" class="suggestion-item" data-id="${s.id}">`+
+        `<div class="sugg-name">${s.name}</div>`+
+        `<div class="lines">${suggestionLineChipsHTML(s, knowledge)}</div>`+
+        `</button>`);
+  });
+  // Render line-based groups with separators
+  for (const lid of lineHits) {
+    const line = LINES[lid];
+    // Group separator indicating why these appear
+    parts.push(`<div class="suggestion-sep">${line.name}</div>`);
+    const stationsOnLine = STATIONS.filter(s => s.lines.includes(lid)).sort((a,b)=>a.name.localeCompare(b.name));
+    for (const st of stationsOnLine) {
+      if (seen.has(st.id)) continue; seen.add(st.id);
+      parts.push(`<button type="button" class="suggestion-item" data-id="${st.id}">`+
+          `<div class="sugg-name">${st.name}</div>`+
+          `<div class="lines">${suggestionLineChipsHTML(st, knowledge)}</div>`+
+          `</button>`);
+    }
+  }
+  if (parts.length === 0) {
+    suggestionsEl.innerHTML = '';
+    suggestionsEl.style.display = 'none';
+    return;
+  }
+  suggestionsEl.innerHTML = parts.join('');
   suggestionsEl.style.display = 'block';
-  // Ensure the suggestions overlay is visible on screen (mobile keyboards can shift the viewport)
   const mapEl = document.getElementById('mapImage');
   if (mapEl) {
-    // Use nearest to avoid jumping too much; smooth scroll for nicer UX
     try { mapEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch { mapEl.scrollIntoView(); }
   }
 }

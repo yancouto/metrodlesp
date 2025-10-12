@@ -8,7 +8,9 @@ SELECT ?station ?connecting_line ?connecting_lineLabel ?coordinate_location ?sta
   OPTIONAL { ?station wdt:P81 ?connecting_line. }
   OPTIONAL { ?station wdt:P625 ?coordinate_location. }
   OPTIONAL { ?station wdt:P296 ?station_code. }
+  # Line and station in use
   ?station wdt:P5817 wd:Q55654238.
+  ?connecting_line wdt:P5817 wd:Q55654238.
 }
 ORDER BY (?stationLabel)
 
