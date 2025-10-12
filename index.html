@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Metrodle SP</title>
+  <link rel="stylesheet" href="./styles.css" />
+  <meta name="theme-color" content="#111" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>Metrodle SP</h1>
+    <div class="actions">
+      <button id="statsBtn" aria-label="Stats">📊</button>
+      <button id="helpBtn" aria-label="Help">❔</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="map">
+      <div id="mapImage" class="map-image" role="img" aria-label="Mapa da estação do dia (sem nomes)">
+        <div class="placeholder">Mapa da estação (placeholder)</div>
+      </div>
+    </section>
+
+    <section class="input-area">
+      <form id="guessForm" autocomplete="off">
+        <label for="guessInput" class="sr-only">Digite o nome da estação ou da linha</label>
+        <input id="guessInput" name="guess" type="text" placeholder="Estação ou linha..." list="stationsList" required />
+        <datalist id="stationsList"></datalist>
+        <button type="submit">OK</button>
+      </form>
+      <div id="hint" class="hint"></div>
+    </section>
+
+    <section id="guesses" class="guesses" aria-live="polite"></section>
+
+    <section class="share-area">
+      <button id="shareBtn" disabled>Compartilhar resultado</button>
+      <div id="shareMsg" class="share-msg" role="status"></div>
+    </section>
+  </main>
+
+  <dialog id="helpDialog">
+    <h2>Como jogar</h2>
+    <ul>
+      <li>Há um novo desafio por dia. Você tem 6 tentativas.</li>
+      <li>Digite o nome da estação (ou da linha) para buscar e tentar.</li>
+      <li>Após um palpite errado, você verá se as cores das linhas da estação fazem parte da estação alvo.</li>
+      <li>Compartilhe seu resultado facilmente quando terminar.</li>
+    </ul>
+    <button id="helpClose">Fechar</button>
+  </dialog>
+
+  <dialog id="statsDialog">
+    <h2>Estatísticas</h2>
+    <div class="stats-grid">
+      <div><div id="statPlayed" class="stat">0</div><div class="stat-label">Jogos</div></div>
+      <div><div id="statWin" class="stat">0</div><div class="stat-label">Vitórias</div></div>
+      <div><div id="statStreak" class="stat">0</div><div class="stat-label">Sequência</div></div>
+      <div><div id="statBest" class="stat">0</div><div class="stat-label">Melhor</div></div>
+    </div>
+    <button id="statsClose">Fechar</button>
+  </dialog>
+
+  <script type="module" src="./dist/index.js"></script>
+</body>
+</html>
