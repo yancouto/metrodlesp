@@ -3,12 +3,18 @@
   "version": "1.0.0",
   "description": "",
   "main": "dist/index.js",
+  "type": "module",
   "scripts": {
-    "build": "tsc"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit false",
+    "test": "tsc && node --test dist/__tests__/*.js"
   },
-  "dependencies": {},
   "devDependencies": {
-    "typescript": "^5.5.3"
+    "@types/node": "^24.7.2",
+    "typescript": "^5.5.3",
+    "vite": "^7.1.9"
   },
   "private": true
 }

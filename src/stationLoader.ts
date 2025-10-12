@@ -24,28 +24,21 @@ ORDER BY (?stationLabel)
 export type LineId = string; // numeric string, e.g., '1', '2', '15'
 export interface Station { id: string; name: string; lines: LineId[]; imageUrl?: string; }
 
-// CSV parsing that supports quoted fields and commas inside quotes.
-function parseCSV(text: string): string[][] {
-  const rows: string[][] = [];
-  let row: string[] = [];
-  let field = '';
-  let inQuotes = false;
-  for (let i = 0; i < text.length; i++) {
-    const c = text[i];
-    if (inQuotes) {
-      if (c === '"') {
-        if (text[i + 1] === '"') { field += '"'; i++; } else { inQuotes = false; }
-      } else { field += c; }
-    } else {
-      if (c === '"') { inQuotes = true; }
-      else if (c === ',') { row.push(field); field = ''; }
-      else if (c === '\n') { row.push(field); rows.push(row); row = []; field = ''; }
-      else if (c === '\r') { /* ignore */ }
-      else { field += c; }
+async function parseCSVObjects(text: string): Promise<Record<string, string>[]> {
+  // Simple inline CSV parsing: split by lines and commas. Assumes no commas inside fields.
+  const lines = text.split(/\r?\n/).filter(l => l.trim().length > 0);
+  if (lines.length === 0) return [];
+  const headers = lines[0].split(',').map(h => h.trim());
+  const rows: Record<string, string>[] = [];
+  for (let i = 1; i < lines.length; i++) {
+    const cols = lines[i].split(',');
+    if (cols.length === 0) continue;
+    const obj: Record<string, string> = {};
+    for (let c = 0; c < headers.length; c++) {
+      obj[headers[c]] = (cols[c] ?? '').trim();
     }
+    rows.push(obj);
   }
-  // push last
-  if (field.length > 0 || row.length > 0) { row.push(field); rows.push(row); }
   return rows;
 }
 
@@ -78,33 +71,28 @@ let stationsCache: Station[] | null = null;
 
 export async function loadStations(): Promise<Station[]> {
   if (stationsCache) return stationsCache;
-  const url = './src/stations.csv';
-  const res = await fetch(url, { cache: 'no-cache' });
+  const url = new URL('./stations.csv', import.meta.url);
+  const res = await fetch(url as any, { cache: 'no-cache' });
   if (!res.ok) throw new Error('Falha ao carregar stations.csv');
   const text = await res.text();
-  const rows = parseCSV(text);
-  if (!rows.length) return (stationsCache = []);
-  const header = rows[0].map(h => h.trim());
-  const idxStationLabel = header.indexOf('stationLabel');
-  const idxLineLabel = header.indexOf('connecting_lineLabel');
-  const idxStationCode = header.indexOf('station_code');
-  if (idxStationLabel === -1) throw new Error('CSV sem coluna stationLabel');
-  if (idxStationCode === -1) throw new Error('CSV sem coluna station_code');
+  const rows = await parseCSVObjects(text);
+
   const map = new Map<string, Station>();
-  for (let i = 1; i < rows.length; i++) {
-    const r = rows[i];
-    if (!r || !r.length) continue;
-    const code = (r[idxStationCode] || '').trim();
+
+  for (const r of rows) {
+    const code = (r['station_code'] || '').trim();
     if (!code) continue;
-    let name = (r[idxStationLabel] || '').trim();
+    let name = (r['stationLabel'] || '').trim();
     if (/^Estação\b/i.test(name)) name = name.replace(/^Estação\s+/i, '').trim();
-    if(name.startsWith("Terminal Intermodal")) continue;
+    if (name.startsWith('Terminal Intermodal')) continue;
     let entry = map.get(code);
     if (!entry) { entry = { id: code, name, lines: [] as LineId[] }; map.set(code, entry); }
-  const lab = (r[idxLineLabel] || '').trim();
-  const mapped = normalizeLineLabel(lab);
-  if(!mapped) continue;
-  if (mapped && !entry.lines.includes(mapped)) entry.lines.push(mapped);
+    const lab = (r['connecting_lineLabel'] || '').trim();
+    if (lab) {
+      const mapped = normalizeLineLabel(lab);
+      if (!mapped) continue;
+      if (!entry.lines.includes(mapped)) entry.lines.push(mapped);
+    }
   }
   stationsCache = Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
   return stationsCache;
