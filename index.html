@@ -21,15 +21,17 @@
       <div id="mapImage" class="map-image" role="img" aria-label="Mapa da estação do dia (sem nomes)">
         <div class="placeholder">Mapa da estação (placeholder)</div>
       </div>
+      <div id="suggestions" class="suggestions" aria-live="polite"></div>
     </section>
 
     <section class="input-area">
       <form id="guessForm" autocomplete="off">
         <label for="guessInput" class="sr-only">Digite o nome da estação ou da linha</label>
-        <input id="guessInput" name="guess" type="text" placeholder="Estação ou linha..." list="stationsList" required />
+        <input id="guessInput" name="guess" type="text" placeholder="Estação ou linha..." autocomplete="off" autocapitalize="none" autocorrect="off" required />
         <datalist id="stationsList"></datalist>
         <button type="submit">OK</button>
       </form>
+      <div id="keyboard" class="keyboard" aria-label="Teclado virtual"></div>
       <div id="hint" class="hint"></div>
     </section>
 

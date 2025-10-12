@@ -1,5 +1,6 @@
 /tmp
 /out-tsc
+/dist
 
 /node_modules
 npm-debug.log*
@@ -9,3 +10,4 @@ yarn-error.log*
 .pnp.js
 
 .vscode/*
+/.idea/workspace.xml

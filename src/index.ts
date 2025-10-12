@@ -1,4 +1,5 @@
 import { loadStations } from './stationLoader.js';
+import { initKeyboard } from './keyboard.js';
 
 type LineId = string; // numeric string: '1', '2', '15'
 
@@ -54,6 +55,7 @@ const STATS_KEY = 'metrodlesp:stats';
 function loadState(): GameState {
   const raw = localStorage.getItem(STORAGE_KEY);
   const solution = pickDailyStation(todayKey);
+  console.log("Today's station", solution);
   if (raw) {
     try {
       const state = JSON.parse(raw) as GameState;
@@ -84,14 +86,14 @@ function stationByName(name: string) {
 }
 
 function searchCandidates(query: string): Station[] {
-  const q = query.trim().toLowerCase();
-  if (!q) return [];
-  // match by station name OR by line id/name
-  const byName = STATIONS.filter(s => s.name.toLowerCase().includes(q));
+  const qn = normalize(query.trim());
+  if (!qn) return [];
+  // match by station name OR by line id/name (diacritics-insensitive)
+  const byName = STATIONS.filter(s => normalize(s.name).includes(qn));
   const lineHits: Set<LineId> = new Set();
   (Object.keys(LINES) as LineId[]).forEach((k) => {
     const l = LINES[k];
-    if (l.name.toLowerCase().includes(q) || l.id.toLowerCase().includes(q)) lineHits.add(l.id);
+    if (normalize(l.name).includes(qn) || normalize(String(l.id)).includes(qn)) lineHits.add(l.id);
   });
   const byLine = STATIONS.filter(s => s.lines.some(l => lineHits.has(l)));
   const map = new Map<string, Station>();
@@ -100,6 +102,14 @@ function searchCandidates(query: string): Station[] {
 }
 
 function unique<T>(arr: T[]): T[] { return Array.from(new Set(arr)); }
+
+// Normalization helper: remove diacritics and lowercase for comparison/prediction
+function normalize(s: string): string {
+  return s
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+}
 
 function compareLines(guess: Station, solution: Station): { line: Line, match: boolean }[] {
   const solSet = new Set(solution.lines);
@@ -150,6 +160,7 @@ const guessesEl = document.getElementById('guesses') as HTMLDivElement;
 const hintEl = document.getElementById('hint') as HTMLDivElement;
 const shareBtn = document.getElementById('shareBtn') as HTMLButtonElement;
 const shareMsg = document.getElementById('shareMsg') as HTMLDivElement;
+const keyboardEl = document.getElementById('keyboard') as HTMLDivElement;
 
 const helpDialog = document.getElementById('helpDialog') as HTMLDialogElement;
 const helpBtn = document.getElementById('helpBtn') as HTMLButtonElement;
@@ -183,6 +194,46 @@ function renderStats() {
   statWin.textContent = String(stats.wins);
   statStreak.textContent = String(stats.streak);
   statBest.textContent = String(stats.best);
+}
+
+// Keyboard wiring (separated module)
+let keyboard: { update: () => void } | null = null;
+const suggestionsEl = document.getElementById('suggestions') as HTMLDivElement | null;
+
+function renderSuggestions() {
+  if (!suggestionsEl) return;
+  const q = guessInput.value.trim();
+  const items = q ? searchCandidates(q) : [];
+  if (!q || items.length === 0) {
+    suggestionsEl.innerHTML = '';
+    suggestionsEl.style.display = 'none';
+    return;
+  }
+  const html = items.map(s => `<button type="button" class="suggestion-item" data-id="${s.id}">${s.name}</button>`).join('');
+  suggestionsEl.innerHTML = html;
+  suggestionsEl.style.display = 'block';
+  // Ensure the suggestions overlay is visible on screen (mobile keyboards can shift the viewport)
+  const mapEl = document.getElementById('mapImage');
+  if (mapEl) {
+    // Use nearest to avoid jumping too much; smooth scroll for nicer UX
+    try { mapEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch { mapEl.scrollIntoView(); }
+  }
+}
+
+// Delegate clicks for suggestions
+if (suggestionsEl) {
+  suggestionsEl.addEventListener('click', (e) => {
+    const target = e.target as HTMLElement;
+    if (target && target.matches('button.suggestion-item')) {
+      const id = target.getAttribute('data-id')!;
+      const st = stationById(id);
+      guessInput.value = st.name;
+      guessInput.focus();
+      refreshDatalist();
+      renderSuggestions();
+      if (keyboard) keyboard.update();
+    }
+  });
 }
 
 function endGame(won: boolean) {
@@ -246,7 +297,28 @@ function initUI() {
   renderMap();
   shareBtn.disabled = state.status === 'playing';
 
-  guessInput.addEventListener('input', refreshDatalist);
+  // Initialize keyboard module
+  keyboard = initKeyboard({
+    root: keyboardEl,
+    input: guessInput,
+    getStations: () => STATIONS,
+    onSubmit: (v) => {
+      onSubmitGuess(v);
+      renderGuesses();
+      renderSuggestions();
+    },
+    onInputChanged: () => {
+      refreshDatalist();
+      renderSuggestions();
+    }
+  });
+
+  // Input listeners
+  guessInput.addEventListener('input', () => {
+    refreshDatalist();
+    renderSuggestions();
+    if (keyboard) keyboard.update();
+  });
   form.addEventListener('submit', (e) => {
     e.preventDefault();
     const v = guessInput.value.trim();
@@ -254,6 +326,8 @@ function initUI() {
     onSubmitGuess(v);
     guessInput.value = '';
     refreshDatalist();
+    renderSuggestions();
+    if (keyboard) keyboard.update();
   });
 
   helpBtn.addEventListener('click', () => helpDialog.showModal());
