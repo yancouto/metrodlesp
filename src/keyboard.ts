@@ -20,14 +20,27 @@ function normalize(s: string): string {
 }
 
 // Compute the set of next allowed characters based on station name prefix
-function nextAllowedChars(prefixRaw: string, stations: Station[]): Set<string> {
+function nextAllowedChars(prefixRaw: string, stations: Station[], keywords: string[] = []): Set<string> {
 	const prefix = normalize(prefixRaw.trim());
 	const allowed = new Set<string>();
-	const candidates = stations;
-	for (const s of candidates) {
+	for (const s of stations) {
 		const name = normalize(s.name);
 		if (prefix.length === 0) {
 			if (name.length > 0) allowed.add(name[0]);
+			continue;
+		}
+		if (name.startsWith(prefix)) {
+			if (name.length > prefix.length) {
+				allowed.add(name[prefix.length]);
+			}
+		}
+	}
+	// Include keyword sequences (e.g., line color names like "azul")
+	for (const kw of keywords) {
+		const name = normalize(kw);
+		if (!name) continue;
+		if (prefix.length === 0) {
+			allowed.add(name[0]);
 			continue;
 		}
 		if (name.startsWith(prefix)) {
@@ -51,10 +64,12 @@ export function initKeyboard(opts: {
 	root: HTMLElement;
 	input: HTMLInputElement;
 	getStations: () => Station[];
+	getKeywords?: () => string[]; // e.g., line color names like "Azul", "Verde"
+	getEnabled?: () => boolean; // globally enable/disable keyboard (e.g., after game ends)
 	onSubmit: SubmitFn;
 	onInputChanged: () => void; // caller updates suggestions/datalist/etc
 }): { update: () => void } {
-	const {root, input, getStations, onSubmit, onInputChanged} = opts;
+	const {root, input, getStations, getKeywords, getEnabled, onSubmit, onInputChanged} = opts;
 
 	root.innerHTML = '';
 
@@ -97,6 +112,8 @@ export function initKeyboard(opts: {
 	root.appendChild(utilRow);
 
 	function handleKey(val: string) {
+		// globally disabled keyboard (e.g., after game ends)
+		if (typeof getEnabled === 'function' && !getEnabled()) return;
 		if (val === 'BACKSPACE') {
 			input.value = input.value.slice(0, -1);
 			onInputChanged();
@@ -111,9 +128,7 @@ export function initKeyboard(opts: {
 			api.update();
 			return;
 		}
-		// regular char
-		const btn = root.querySelector(`button.key[data-value="${val}"]`) as HTMLButtonElement | null;
-		if (btn && btn.dataset.disabled === 'true') return; // respect disabled
+		// regular char: allow even if visually disabled for autocomplete purposes
 		input.value += val;
 		onInputChanged();
 		api.update();
@@ -121,17 +136,22 @@ export function initKeyboard(opts: {
 
 	const api = {
 		update() {
+			const enabled = typeof getEnabled === 'function' ? getEnabled() : true;
 			const stations = getStations();
-			const allowed = nextAllowedChars(input.value, stations);
+			const keywords = typeof getKeywords === 'function' ? getKeywords() ?? [] : [];
+			const allowed = enabled ? nextAllowedChars(input.value, stations, keywords) : new Set<string>();
 			const buttons = Array.from(root.querySelectorAll('button.key')) as HTMLButtonElement[];
 			for (const b of buttons) {
 				const v = b.getAttribute('data-value')!;
+				if (!enabled) {
+					b.dataset.disabled = 'true';
+					continue;
+				}
 				if (v === 'BACKSPACE' || v === 'OK') {
 					b.dataset.disabled = 'false';
 					continue;
 				}
-				const normalized = v; // v is a single char ('a'-'z', '-', or ' ')
-				const isAllowed = allowed.has(normalized);
+				const isAllowed = allowed.has(v);
 				b.dataset.disabled = isAllowed ? 'false' : 'true';
 				b.disabled = false; // keep clickable; visually indicate via data-disabled
 			}

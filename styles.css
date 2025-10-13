@@ -22,7 +22,13 @@ body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-seri
 #okBtn { min-width:64px; }
 .hint { color:#aaa; font-size:12px; min-height:18px; }
 
-.guesses { margin-top:12px; display:flex; flex-direction:column; gap:8px; }
+.guesses {
+    margin-top: 12px;
+    margin-bottom: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
 .guess { display:flex; align-items:center; justify-content:space-between; gap:8px; background:#141414; border:1px solid #222; padding:10px; border-radius:8px; }
 .guess .name { font-weight:600; }
 .lines { display:flex; gap:4px; flex-wrap:wrap; }
@@ -59,11 +65,61 @@ body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-seri
 /* Suggestions overlay bounded to the map area */
 .suggestions { display:none; position:absolute; top:8px; left:8px; right:8px; bottom:8px; overflow:auto; z-index: 20; padding: 0; }
 .suggestions:empty { display:none; }
+
+/* Colored, spaced separator for line-based groups */
+.suggestion-sep {
+    margin: 10px 0 6px;
+    padding: 6px 10px;
+    background: #151515;
+    border-left: 4px solid var(--line-color, #444);
+    border-radius: 6px;
+    font-weight: 600;
+    color: #fff;
+}
 .suggestion-item { width:100%; text-align:left; padding:10px 12px; border:1px solid #2a2a2a; background:rgba(20,20,20,0.95); color:#fff; border-radius:8px; margin-top:6px; box-shadow: 0 6px 16px rgba(0,0,0,0.35); display:flex; align-items:center; justify-content:space-between; }
 .suggestion-item:hover { background:#222; }
 
 dialog { border:1px solid #333; border-radius:12px; padding:16px; background:#171717; color:#fff; }
 button { cursor:pointer; }
+
+#helpClose, #statsClose {
+    display: block;
+    margin: 12px auto 0;
+    padding: 10px 16px;
+    background: transparent;
+    border: 1px solid #444;
+    color: #fff;
+    border-radius: 8px;
+}
+
+#statsShareBtn {
+    display: block;
+    margin: 12px auto 0;
+    padding: 10px 16px;
+    background: transparent;
+    border: 1px solid #444;
+    color: #fff;
+    border-radius: 8px;
+}
+
+#statsShareBtn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+#statsDialog h2 {
+    text-align: center;
+    margin: 0 0 8px;
+}
+
+#statsSummary {
+    margin-top: 8px;
+    text-align: center;
+}
+
+#statsShareMsg {
+    margin-top: 6px;
+}
 
 /* Suggestions list layout */
 .suggestion-item .sugg-name { flex: 1; margin-right: 8px; }
@@ -75,10 +131,44 @@ button { cursor:pointer; }
 
 /* Stats histogram */
 .hist { display:flex; align-items:flex-end; gap:8px; height:140px; margin:12px 0; }
-.hist .bar { flex:1; background:#1e1e1e; border:1px solid #333; border-bottom: none; position:relative; border-radius:6px 6px 0 0; display:flex; align-items:flex-end; justify-content:center; }
-.hist .bar .count { position:absolute; top:-18px; font-size:12px; color:#ccc; }
+
+.hist .bar {
+    flex: 1;
+    height: 100%;
+    background: #1e1e1e;
+    border: 1px solid #333;
+    border-bottom: none;
+    position: relative;
+    border-radius: 6px 6px 0 0;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    overflow: hidden;
+}
 .hist .bar .label { position:absolute; bottom:-18px; font-size:12px; color:#aaa; }
-.hist .bar .fill { width:100%; background:#2f6; border-radius:6px 6px 0 0; }
+
+.hist .bar .fill {
+    width: 100%;
+    background: #2f6;
+    border-radius: 6px 6px 0 0;
+    transition: height 150ms ease;
+}
+
+.hist .bar .fill.nz {
+    min-height: 6px;
+}
+
+.hist .bar .count {
+    position: absolute;
+    top: 4px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: 12px;
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+    pointer-events: none;
+}
 
 .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); border:0; }
 

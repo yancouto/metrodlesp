@@ -60,8 +60,10 @@
     <ul>
       <li>Há um novo desafio por dia. Você tem 6 tentativas.</li>
       <li>Digite o nome da estação (ou da linha) para buscar e tentar.</li>
-      <li>Após um palpite errado, você verá se as cores das linhas da estação fazem parte da estação alvo.</li>
-      <li>Compartilhe seu resultado facilmente quando terminar.</li>
+      <li>Após um palpite errado, você verá se as cores das linhas da estação fazem parte da estação alvo, e a
+        distância.
+      </li>
+      <li>Compartilhe seu resultado quando terminar.</li>
     </ul>
     <button id="helpClose">Fechar</button>
   </dialog>
@@ -75,6 +77,9 @@
       <div><div id="statBest" class="stat">0</div><div class="stat-label">Melhor</div></div>
     </div>
     <div id="guessHist" class="hist" aria-label="Distribuição de vitórias por tentativas"></div>
+    <p id="statsSummary"></p>
+    <button id="statsShareBtn" disabled>Compartilhar resultado</button>
+    <div id="statsShareMsg" class="share-msg" role="status"></div>
     <button id="statsClose">Fechar</button>
   </dialog>
 

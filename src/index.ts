@@ -73,11 +73,11 @@ const hintEl = document.getElementById('hint') as HTMLDivElement;
 const shareBtn = document.getElementById('shareBtn') as HTMLButtonElement; // legacy (hidden)
 const keyboardEl = document.getElementById('keyboard') as HTMLDivElement;
 const backspaceBtn = document.getElementById('backspaceBtn') as HTMLButtonElement | null;
-const endDialog = document.getElementById('endDialog') as HTMLDialogElement | null;
-const endSummary = document.getElementById('endSummary') as HTMLParagraphElement | null;
-const endShareBtn = document.getElementById('endShareBtn') as HTMLButtonElement | null;
-const endShareMsg = document.getElementById('endShareMsg') as HTMLDivElement | null;
-const endCloseBtn = document.getElementById('endCloseBtn') as HTMLButtonElement | null;
+const okBtn = document.getElementById('okBtn') as HTMLButtonElement | null;
+// Completion UI will be shown inside the stats dialog
+const statsSummary = document.getElementById('statsSummary') as HTMLParagraphElement | null;
+const statsShareBtn = document.getElementById('statsShareBtn') as HTMLButtonElement | null;
+const statsShareMsg = document.getElementById('statsShareMsg') as HTMLDivElement | null;
 
 const helpDialog = document.getElementById('helpDialog') as HTMLDialogElement;
 const helpBtn = document.getElementById('helpBtn') as HTMLButtonElement;
@@ -123,11 +123,30 @@ function renderStats() {
 	statStreak.textContent = String(stats.streak);
 	statBest.textContent = String(stats.best);
 	if (guessHistEl) {
-		const max = Math.max(1, ...stats.dist);
-		guessHistEl.innerHTML = stats.dist.map((count, i) => {
+		const losses = Math.max(0, stats.played - stats.wins);
+		const values = [...stats.dist, losses]; // 1-6 + X
+		const labels = ['1', '2', '3', '4', '5', '6', 'X'];
+		const max = Math.max(1, ...values);
+		guessHistEl.innerHTML = values.map((count, i) => {
 			const h = Math.round((count / max) * 100);
-			return `<div class="bar"><div class="count">${count}</div><div class="fill" style="height:${h}%"></div><div class="label">${i + 1}</div></div>`;
+			const nz = count > 0 ? ' nz' : '';
+			return `<div class="bar"><div class="fill${nz}" style="height:${h}%"></div><div class="count">${count}</div><div class="label">${labels[i]}</div></div>`;
 		}).join('');
+	}
+	// Show/enable share controls and summary when game finished
+	if (statsSummary) {
+		const solution = stationById(gameState.solutionId);
+		if (gameState.status === 'won') {
+			const attempts = gameState.guesses.length;
+			statsSummary.textContent = `Você acertou ${solution.name} em ${attempts} tentativa(s)!`;
+		} else if (gameState.status === 'lost') {
+			statsSummary.textContent = `Não foi dessa vez. A estação era ${solution.name}.`;
+		} else {
+			statsSummary.textContent = '';
+		}
+	}
+	if (statsShareBtn) {
+		statsShareBtn.disabled = gameState.status === 'playing';
 	}
 }
 
@@ -151,7 +170,7 @@ function renderSuggestions() {
 	const lineHits: LineId[] = [];
 	(Object.keys(LINES) as LineId[]).forEach((id) => {
 		const l = LINES[id];
-		if (normalize(l.name).includes(qn) || normalize(String(l.id)).includes(qn)) lineHits.push(l.id);
+		if ((qn.length >= 2 && normalize(l.name).includes(qn)) || String(l.id) === qn) lineHits.push(l.id);
 	});
 	// Build HTML
 	const seen = new Set<string>();
@@ -168,12 +187,16 @@ function renderSuggestions() {
 	// Render line-based groups with separators
 	for (const lid of lineHits) {
 		const line = LINES[lid];
-		// Group separator indicating why these appear
-		parts.push(`<div class="suggestion-sep">${line.name}</div>`);
+		let any = false;
 		const stationsOnLine = STATIONS.filter(s => s.lines.includes(lid)).sort((a, b) => a.name.localeCompare(b.name));
 		for (const st of stationsOnLine) {
 			if (seen.has(st.id)) continue;
 			seen.add(st.id);
+			if (!any) {
+				any = true;
+				// Group separator indicating why these appear; carry color via CSS var
+				parts.push(`<div class="suggestion-sep" style="--line-color:${line.color}">${line.name}</div>`);
+			}
 			parts.push(`<button type="button" class="suggestion-item" data-id="${st.id}">` +
 				`<div class="sugg-name">${st.name}</div>` +
 				`<div class="lines">${suggestionLineChipsHTML(st, knowledge)}</div>` +
@@ -225,24 +248,21 @@ function endGame(won: boolean) {
 			stats.streak += 1;
 			stats.best = Math.max(stats.best, stats.streak);
 			const attempts = gameState.guesses.length;
-			if (attempts >= 1 && attempts <= 6) {
+			if (attempts >= 1 && attempts <= 6)
 				stats.dist[attempts - 1] += 1;
-			}
 		} else {
 			stats.streak = 0;
 		}
 		state.saveStats(stats);
 	}
+	// Disable interactive input and refresh UI
+	updatePlayableUI();
 	renderStats();
-	// Show completion dialog with share
-	if (endDialog) {
-		const solution = stationById(gameState.solutionId);
-		const attempts = gameState.status === 'won' ? gameState.guesses.length : 6;
-		if (endSummary) endSummary.textContent = won ? `Você acertou ${solution.name} em ${attempts} tentativa(s)!` : `Não foi dessa vez. A estação era ${solution.name}.`;
-		try {
-			endDialog.showModal();
-		} catch { /* dialog might already be open */
-		}
+	// Show stats dialog upon completion
+	try {
+		statsDialog.showModal();
+	} catch {
+		// ignore
 	}
 }
 
@@ -296,18 +316,33 @@ function renderMap() {
 	mapDiv.appendChild(wrapper);
 }
 
+function updatePlayableUI() {
+	const playing = gameState.status === 'playing';
+	if (guessInput) guessInput.disabled = !playing;
+	if (backspaceBtn) backspaceBtn.disabled = !playing;
+	if (okBtn) okBtn.disabled = !playing;
+	if (keyboard) keyboard.update();
+}
+
 function initUI() {
 	refreshDatalist();
 	renderGuesses();
 	renderStats();
 	renderMap();
 	shareBtn.disabled = gameState.status === 'playing';
+	updatePlayableUI();
 
 	// Initialize keyboard module
 	keyboard = initKeyboard({
 		root: keyboardEl,
 		input: guessInput,
 		getStations: () => STATIONS,
+		getKeywords: () => Object.values(LINES).map(l => {
+			const name = l.name;
+			const dashIdx = name.indexOf('-');
+			return dashIdx >= 0 ? name.slice(dashIdx + 1).trim() : name;
+		}),
+		getEnabled: () => gameState.status === 'playing',
 		onSubmit: (v) => {
 			onSubmitGuess(v);
 			renderGuesses();
@@ -353,14 +388,11 @@ function initUI() {
 		});
 	}
 
-	if (endShareBtn) {
-		endShareBtn.addEventListener('click', async () => {
+	if (statsShareBtn) {
+		statsShareBtn.addEventListener('click', async () => {
 			const msg = await shareResult(gameState);
-			if (endShareMsg) endShareMsg.textContent = msg;
+			if (statsShareMsg) statsShareMsg.textContent = msg;
 		});
-	}
-	if (endCloseBtn && endDialog) {
-		endCloseBtn.addEventListener('click', () => endDialog.close());
 	}
 }
 
