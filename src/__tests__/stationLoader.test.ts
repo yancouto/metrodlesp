@@ -1,30 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-// Polyfill fetch for stationLoader to read local CSV in Node
-import {readFile} from 'node:fs/promises';
-import {resolve} from 'node:path';
+import {installFetchMock} from './testUtils.js';
 import {bfsDistances, loadAdjacencyGraph, loadStations} from '../stationLoader.js';
 import {LINES} from '../lines.js';
 
-// Minimal Response-like object for our loader needs
-class SimpleResponse {
-	constructor(private body: string, public ok = true) {
-	}
-
-	async text() {
-		return this.body;
-	}
-}
-
-// Install a fetch that ignores the incoming URL and reads the CSV from disk.
-// stationLoader calls fetch('./src/stations.csv'), but Node's fetch does not
-// support relative file paths in all environments. We provide a stable shim.
-(globalThis as any).fetch = async (url: URL) => {
-	const csvPath = resolve(process.cwd(), 'src', url.pathname.split('/').pop()!);
-	const content = await readFile(csvPath, 'utf8');
-	return new SimpleResponse(content) as any;
-};
+installFetchMock();
 
 test('loadStations returns well-formed stations and valid lines', async () => {
 	const stations = await loadStations();
