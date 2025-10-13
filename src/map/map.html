@@ -1,0 +1,85 @@
+<!-- map.html (not part of the game; a generator page) -->
+<!doctype html>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<style>
+    html, body, #map {
+        margin: 0;
+        height: 100%;
+        width: 100%;
+        background: #111;
+    }
+</style>
+<link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet"/>
+<script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
+<div id="map"></div>
+<script>
+    const WIDTH = 512, HEIGHT = 512; // or 640x640
+    const MAPTILER_KEY = new URLSearchParams(location.search).get('k');
+    const styleUrl = `https://api.maptiler.com/maps/bright/style.json?key=${MAPTILER_KEY}`;
+
+    // Read center from URL query params if provided
+    const params = new URLSearchParams(location.search);
+    const qLon = parseFloat(params.get('lon'));
+    const qLat = parseFloat(params.get('lat'));
+    const qZ = parseFloat(params.get('z'));
+    const hasCenter = Number.isFinite(qLon) && Number.isFinite(qLat);
+
+    const map = new maplibregl.Map({
+        container: 'map',
+        style: styleUrl,
+        center: hasCenter ? [qLon, qLat] : [-46.636681, -23.599162],
+        zoom: Number.isFinite(qZ) ? qZ : 17,
+        pitch: 0,
+        bearing: 0,
+        interactive: false,
+        preserveDrawingBuffer: true // needed for toDataURL()
+    });
+
+    const myGeoJSON = {
+        type: 'FeatureCollection',
+        features: [
+            {type: 'Feature', properties: {name: 'Demo'}, geometry: {type: 'Point', coordinates: [-46.6367, -23.5992]}}
+        ]
+    };
+    const dataUrl = './lines.geojson';
+    const geojson = fetch(dataUrl).then(r => r.json()).then(geojson =>
+        map.on('load', () => {
+            map.addSource('custom-geojson', {type: 'geojson', data: geojson});
+            map.addLayer({
+                id: 'custom-lines',
+                type: 'line',
+                source: 'custom-geojson',
+                filter: ['==', ['geometry-type'], 'LineString'], // or ['in', ['geometry-type'], ['literal', ['LineString','MultiLineString']]]
+                paint: {
+                    'line-color': '#1c0505',
+                    'line-width': 3,
+                    'line-opacity': 1.0
+                }
+            });
+        })
+    );
+
+
+    function hideNames() {
+        const style = map.getStyle();
+        for (const layer of style.layers) {
+            // Hide all text/icons
+            if (layer.type === 'symbol')
+                map.setLayoutProperty(layer.id, 'visibility', 'none');
+        }
+    }
+
+    map.on('styledata', () => {
+        hideNames();
+    });
+
+    window.renderCentered = async function (lon, lat, zoom = 15) {
+        return new Promise((resolve) => {
+            map.once('idle', () => {
+                resolve(map.getCanvas().toDataURL('image/png'));
+            });
+            map.jumpTo({center: [lon, lat], zoom});
+        });
+    };
+</script>

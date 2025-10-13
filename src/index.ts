@@ -306,14 +306,27 @@ function onSubmitGuess(name: string) {
 }
 
 function renderMap() {
-	const solution = stationById(gameState.solutionId);
 	const mapDiv = document.getElementById('mapImage') as HTMLDivElement;
 	mapDiv.innerHTML = '';
-	// Placeholder rectangle with blurred circles representing lines count
-	const wrapper = document.createElement('div');
-	wrapper.className = 'placeholder';
-	wrapper.textContent = `Estação do dia: ${solution.lines.length} linhas (imagem placeholder)`;
-	mapDiv.appendChild(wrapper);
+	// Determine today's solution and pass its coordinates to the embedded map
+	const solution = stationById(gameState.solutionId);
+	const params = new URLSearchParams();
+	if (typeof solution.lon === 'number' && typeof solution.lat === 'number') {
+		params.set('lon', String(solution.lon));
+		params.set('lat', String(solution.lat));
+		params.set('z', '15'); // default zoom
+	}
+	const iframe = document.createElement('iframe');
+	// Append MapTiler key if available via Vite env (not present in tests/build output)
+	const VITE_KEY = (import.meta as any).env.VITE_MAPTILER_KEY;
+	if (VITE_KEY) params.set('k', VITE_KEY);
+	iframe.src = '/src/map/map.html' + (params.toString() ? `?${params.toString()}` : '');
+	iframe.title = 'Mapa (sem nomes)';
+	iframe.style.width = '100%';
+	iframe.style.height = '100%';
+	iframe.style.border = '0';
+	iframe.setAttribute('loading', 'lazy');
+	mapDiv.appendChild(iframe);
 }
 
 function updatePlayableUI() {

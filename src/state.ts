@@ -15,6 +15,7 @@ const STATS_KEY = 'metrodlesp:stats';
 
 export function loadState(dateKey: string, stations: Station[]): GameState {
 	const solution = pickDailyStation(dateKey, stations);
+	console.log('picked daily station', solution);
 	const raw = localStorage.getItem(STORAGE_KEY);
 	if (raw) {
 		try {

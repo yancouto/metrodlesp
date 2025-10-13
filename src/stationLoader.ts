@@ -39,6 +39,8 @@ export interface Station {
 	lines: LineId[];
 	imageUrl?: string;
 	wikidataId: string;
+	lat?: number;
+	lon?: number;
 }
 
 async function parseCSVObjects(text: string): Promise<Record<string, string>[]> {
@@ -86,6 +88,13 @@ function normalizeLineLabel(label: string): LineId | undefined {
 
 let stationsCache: Station[] | null = null;
 
+function parsePoint(s: string): { lon: number; lat: number } | null {
+	// Expected format: Point(lon lat)
+	const m = s.match(/Point\(([-0-9.]+)\s+([-0-9.]+)\)/);
+	if (!m) return null;
+	return {lon: Number(m[1]), lat: Number(m[2])};
+}
+
 function extractQId(url: string): string | null {
 	// Expect something like http://www.wikidata.org/entity/Q12345 or https://www.wikidata.org/wiki/Q12345
 	const m = url.match(/Q\d+/i);
@@ -117,6 +126,15 @@ export async function loadStations(): Promise<Station[]> {
 			map.set(code, entry);
 		} else {
 			entry.wikidataId = wikidataId;
+		}
+		// Parse and attach coordinates if present
+		const coordRaw = (r['coordinate_location'] || '').trim();
+		if (coordRaw) {
+			const pt = parsePoint(coordRaw);
+			if (pt) {
+				entry.lon = pt.lon;
+				entry.lat = pt.lat;
+			}
 		}
 		const lab = (r['connecting_lineLabel'] || '').trim();
 		if (lab) {
