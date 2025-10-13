@@ -1,10 +1,9 @@
-import { loadStations } from './stationLoader.js';
-import { initKeyboard } from './keyboard.js';
-import { LINES, Line, LineId } from './lines.js';
+import {bfsDistances, loadAdjacencyGraph, loadStations, Station} from './stationLoader.js';
+import {initKeyboard} from './keyboard.js';
+import {Line, LineId, LINES} from './lines.js';
 
-interface Station { id: string; name: string; lines: LineId[]; imageUrl?: string; }
-
-let STATIONS: Station[] = [];
+let STATIONS: Station[];
+let DIST_FROM_SOLUTION: Map<string, number>; // keyed by wikidataId
 
 // Utilities
 const todayKey = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
@@ -52,11 +51,15 @@ function loadState(): GameState {
 function saveState(s: GameState) { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); }
 
 // Stats
-type Stats = { played: number; wins: number; streak: number; best: number; lastDate?: string; };
+type Stats = { played: number; wins: number; streak: number; best: number; lastDate?: string; dist: number[] };
 function loadStats(): Stats {
   const raw = localStorage.getItem(STATS_KEY);
-  if (raw) { try { return JSON.parse(raw) as Stats; } catch {} }
-  return { played: 0, wins: 0, streak: 0, best: 0 };
+  if (!raw) return { played: 0, wins: 0, streak: 0, best: 0, dist: [0,0,0,0,0,0] };
+  try {
+    return JSON.parse(raw) as Stats;
+  } catch {
+    return { played: 0, wins: 0, streak: 0, best: 0, dist: [0,0,0,0,0,0] };
+  }
 }
 function saveStats(st: Stats) { localStorage.setItem(STATS_KEY, JSON.stringify(st)); }
 
@@ -93,9 +96,9 @@ function normalize(s: string): string {
 }
 
 function compareLines(guess: Station, solution: Station): { line: Line, match: boolean }[] {
+  // Only evaluate the guessed station's lines and mark whether each exists in the solution.
   const solSet = new Set(solution.lines);
-  const list = unique([...guess.lines, ...solution.lines]);
-  return list.map(id => ({ line: LINES[id], match: solSet.has(id) }));
+  return guess.lines.map(id => ({ line: LINES[id], match: solSet.has(id) }));
 }
 
 function lineChipsHTML(items: { line: Line, match: boolean }[]) {
@@ -127,19 +130,26 @@ function suggestionLineChipsHTML(station: Station, knowledge: { eliminated: Set<
   return lineChipsHTML(chips);
 }
 
+function arrayEquals<A>(a: A[], b: A[]): boolean {
+  return a.length === b.length && a.every((val, idx) => val === b[idx]);
+}
+
 // Share
 function buildShare(state: GameState): string {
   const date = state.dateKey;
   const attempts = state.status === 'won' ? state.guesses.length : 'X';
-  const title = `Metrodle SP ${date} ${attempts}/6`;
+  const title = `Metrodle SP ${date}`;
   const solution = stationById(state.solutionId);
   const rows = state.guesses.map(id => {
     const guess = stationById(id);
     const comps = compareLines(guess, solution);
-    // Use green square for match, black square for miss
-    return comps.map(c => c.match ? '🟩' : '⬛').join('');
+    const matchSquares = (arrayEquals(guess.lines, solution.lines)? '🟩' : '⬛');
+    if(guess.id === solution.id)
+      return `${matchSquares} 🚆`;
+    let distTxt = DIST_FROM_SOLUTION.get(guess.wikidataId)!;
+    return `${matchSquares} a ${distTxt} paradas`;
   });
-  return [title, ...rows].join('\n');
+  return [title, ...rows, ` ${attempts}/6`, 'placeholder.com'].join('\n');
 }
 
 async function shareResult(state: GameState) {
@@ -164,9 +174,16 @@ const form = document.getElementById('guessForm') as HTMLFormElement;
 const list = document.getElementById('stationsList') as HTMLDataListElement;
 const guessesEl = document.getElementById('guesses') as HTMLDivElement;
 const hintEl = document.getElementById('hint') as HTMLDivElement;
-const shareBtn = document.getElementById('shareBtn') as HTMLButtonElement;
+const shareBtn = document.getElementById('shareBtn') as HTMLButtonElement; // legacy (hidden)
 const shareMsg = document.getElementById('shareMsg') as HTMLDivElement;
 const keyboardEl = document.getElementById('keyboard') as HTMLDivElement;
+const backspaceBtn = document.getElementById('backspaceBtn') as HTMLButtonElement | null;
+const okBtn = document.getElementById('okBtn') as HTMLButtonElement | null;
+const endDialog = document.getElementById('endDialog') as HTMLDialogElement | null;
+const endSummary = document.getElementById('endSummary') as HTMLParagraphElement | null;
+const endShareBtn = document.getElementById('endShareBtn') as HTMLButtonElement | null;
+const endShareMsg = document.getElementById('endShareMsg') as HTMLDivElement | null;
+const endCloseBtn = document.getElementById('endCloseBtn') as HTMLButtonElement | null;
 
 const helpDialog = document.getElementById('helpDialog') as HTMLDialogElement;
 const helpBtn = document.getElementById('helpBtn') as HTMLButtonElement;
@@ -178,6 +195,7 @@ const statPlayed = document.getElementById('statPlayed')!;
 const statWin = document.getElementById('statWin')!;
 const statStreak = document.getElementById('statStreak')!;
 const statBest = document.getElementById('statBest')!;
+const guessHistEl = document.getElementById('guessHist') as HTMLDivElement | null;
 
 function refreshDatalist() {
   const q = guessInput.value;
@@ -187,12 +205,22 @@ function refreshDatalist() {
 
 function renderGuesses() {
   const solution = stationById(state.solutionId);
-  guessesEl.innerHTML = state.guesses.map((id, i) => {
-    const s = stationById(id);
-    const comps = compareLines(s, solution);
-    const correct = s.id === solution.id;
-    return `<div class="guess"><div><div class="name">${i+1}. ${s.name}${correct ? ' ✅' : ''}</div></div><div class="lines">${lineChipsHTML(comps)}</div></div>`;
-  }).join('');
+  const total = 6;
+  const parts: string[] = [];
+  for (let i = 0; i < total; i++) {
+    if (i < state.guesses.length) {
+      const id = state.guesses[i];
+      const s = stationById(id);
+      const comps = compareLines(s, solution);
+      const correct = s.id === solution.id;
+      const dist = DIST_FROM_SOLUTION.get(s.wikidataId);
+      const distHtml = !correct && typeof dist === 'number' ? ` <span class="dist-badge">a ${dist} ${dist === 1 ? 'parada' : 'paradas'}</span>` : '';
+      parts.push(`<div class="guess"><div><div class="name">${i+1}. ${s.name}${correct ? ' ✅' : ''}${distHtml}</div></div><div class="lines">${lineChipsHTML(comps)}</div></div>`);
+    } else {
+      parts.push(`<div class="guess placeholder"><div><div class="name">${i+1}. —</div></div><div class="lines"></div></div>`);
+    }
+  }
+  guessesEl.innerHTML = parts.join('');
 }
 
 function renderStats() {
@@ -200,6 +228,14 @@ function renderStats() {
   statWin.textContent = String(stats.wins);
   statStreak.textContent = String(stats.streak);
   statBest.textContent = String(stats.best);
+  if (guessHistEl) {
+    const max = Math.max(1, ...stats.dist);
+    const bars = stats.dist.map((count, i) => {
+      const h = Math.round((count / max) * 100);
+      return `<div class="bar"><div class="count">${count}</div><div class="fill" style="height:${h}%"></div><div class="label">${i+1}</div></div>`;
+    }).join('');
+    guessHistEl.innerHTML = bars;
+  }
 }
 
 // Keyboard wiring (separated module)
@@ -265,9 +301,9 @@ function renderSuggestions() {
 // Delegate clicks for suggestions
 if (suggestionsEl) {
   suggestionsEl.addEventListener('click', (e) => {
-    const target = e.target as HTMLElement;
-    if (target && target.matches('button.suggestion-item')) {
-      const id = target.getAttribute('data-id')!;
+    const el = (e.target as HTMLElement).closest('button.suggestion-item') as HTMLElement | null;
+    if (el) {
+      const id = el.getAttribute('data-id')!;
       const st = stationById(id);
       guessInput.value = st.name;
       guessInput.focus();
@@ -281,15 +317,31 @@ if (suggestionsEl) {
 function endGame(won: boolean) {
   state.status = won ? 'won' : 'lost';
   saveState(state);
-  shareBtn.disabled = false;
   // update stats once per day
   if (stats.lastDate !== state.dateKey) {
     stats.played += 1;
     stats.lastDate = state.dateKey;
-    if (won) { stats.wins += 1; stats.streak += 1; stats.best = Math.max(stats.best, stats.streak); } else { stats.streak = 0; }
+    if (won) {
+      stats.wins += 1;
+      stats.streak += 1;
+      stats.best = Math.max(stats.best, stats.streak);
+      const attempts = state.guesses.length;
+      if (attempts >= 1 && attempts <= 6) {
+        stats.dist[attempts - 1] += 1;
+      }
+    } else {
+      stats.streak = 0;
+    }
     saveStats(stats);
   }
   renderStats();
+  // Show completion dialog with share
+  if (endDialog) {
+    const solution = stationById(state.solutionId);
+    const attempts = state.status === 'won' ? state.guesses.length : 6;
+    if (endSummary) endSummary.textContent = won ? `Você acertou ${solution.name} em ${attempts} tentativa(s)!` : `Não foi dessa vez. A estação era ${solution.name}.`;
+    try { endDialog.showModal(); } catch { /* dialog might already be open */ }
+  }
 }
 
 function checkIfEnded() {
@@ -313,9 +365,8 @@ function onSubmitGuess(name: string) {
   if (match.id === solution.id) {
     setHint(`Acertou! Era ${solution.name}.`);
   } else {
-    const comps = compareLines(match, solution);
-    const ok = comps.filter(c => c.match).length;
-    setHint(`Linhas em comum: ${ok}/${comps.length}`);
+    // No hint text required per spec; feedback is visual via line chips.
+    setHint('');
   }
   checkIfEnded();
   if (state.status !== 'playing') shareBtn.disabled = false;
@@ -377,19 +428,34 @@ function initUI() {
   statsBtn.addEventListener('click', () => { renderStats(); statsDialog.showModal(); });
   statsClose.addEventListener('click', () => statsDialog.close());
 
-  shareBtn.addEventListener('click', async () => {
-    const msg = await shareResult(state);
-    shareMsg.textContent = msg;
-  });
+  if (backspaceBtn) {
+    backspaceBtn.addEventListener('click', () => {
+      guessInput.value = guessInput.value.slice(0, -1);
+      refreshDatalist();
+      renderSuggestions();
+      if (keyboard) keyboard.update();
+    });
+  }
+
+  if (endShareBtn) {
+    endShareBtn.addEventListener('click', async () => {
+      const msg = await shareResult(state);
+      if (endShareMsg) endShareMsg.textContent = msg;
+    });
+  }
+  if (endCloseBtn && endDialog) {
+    endCloseBtn.addEventListener('click', () => endDialog.close());
+  }
 }
 
 // Boot: load stations from CSV (required) then init UI
 async function boot() {
-  const loaded = await loadStations();
-  console.log('loaded', loaded);
-  STATIONS = loaded;
+  STATIONS = await loadStations();
   state = loadState();
   stats = loadStats();
+  const solution = stationById(state.solutionId);
+  let ADJ_GRAPH = await loadAdjacencyGraph();
+  DIST_FROM_SOLUTION = bfsDistances(solution, ADJ_GRAPH);
   initUI();
 }
 

@@ -14,6 +14,17 @@ SELECT ?station ?connecting_line ?connecting_lineLabel ?coordinate_location ?sta
 }
 ORDER BY (?stationLabel)
 
+# São Paulo Metro station adjacencies
+SELECT ?station ?adjacent_station WHERE {
+  ?station wdt:P31 wd:Q928830.
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "pt,en". }
+  ?station wdt:P16 wd:Q483343;
+    wdt:P5817 wd:Q55654238;
+    wdt:P197 ?adjacent_station.
+  ?adjacent_station wdt:P5817 wd:Q55654238.
+}
+ORDER BY (?station)
+
 */
 
 // This module exports an async function `loadStations()` that reads ./src/stations.csv
@@ -22,7 +33,7 @@ ORDER BY (?stationLabel)
 
 // Local type shadows to avoid importing from index.ts. Keep in sync with index.ts if changed.
 export type LineId = string; // numeric string, e.g., '1', '2', '15'
-export interface Station { id: string; name: string; lines: LineId[]; imageUrl?: string; }
+export interface Station { id: string; name: string; lines: LineId[]; imageUrl?: string; wikidataId: string; }
 
 async function parseCSVObjects(text: string): Promise<Record<string, string>[]> {
   // Simple inline CSV parsing: split by lines and commas. Assumes no commas inside fields.
@@ -69,6 +80,12 @@ function normalizeLineLabel(label: string): LineId | undefined {
 
 let stationsCache: Station[] | null = null;
 
+function extractQId(url: string): string | null {
+  // Expect something like http://www.wikidata.org/entity/Q12345 or https://www.wikidata.org/wiki/Q12345
+  const m = url.match(/Q\d+/i);
+  return m ? m[0].toUpperCase() : null;
+}
+
 export async function loadStations(): Promise<Station[]> {
   if (stationsCache) return stationsCache;
   const url = new URL('./stations.csv', import.meta.url);
@@ -85,16 +102,69 @@ export async function loadStations(): Promise<Station[]> {
     let name = (r['stationLabel'] || '').trim();
     if (/^Estação\b/i.test(name)) name = name.replace(/^Estação\s+/i, '').trim();
     if (name.startsWith('Terminal Intermodal')) continue;
+    const wdUrl = (r['station'] || '').trim();
+    const wikidataId = extractQId(wdUrl);
+    if (!wikidataId) continue; // skip if no wikidata id
     let entry = map.get(code);
-    if (!entry) { entry = { id: code, name, lines: [] as LineId[] }; map.set(code, entry); }
+    if (!entry) { entry = { id: code, name, lines: [] as LineId[], wikidataId }; map.set(code, entry); }
+    else { entry.wikidataId = wikidataId; }
     const lab = (r['connecting_lineLabel'] || '').trim();
     if (lab) {
       const mapped = normalizeLineLabel(lab);
       if (!mapped) continue;
-      if (!entry.lines.includes(mapped)) entry.lines.push(mapped);
+      if (!entry.lines.includes(mapped)) {
+        entry.lines.push(mapped);
+        entry.lines.sort();
+      }
     }
   }
   stationsCache = Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
   return stationsCache;
+}
+
+export type AdjacencyGraph = Map<string, Set<string>>; // wikidataId -> neighbors (wikidataId)
+let adjCache: AdjacencyGraph | null = null;
+
+export async function loadAdjacencyGraph(): Promise<AdjacencyGraph> {
+  if (adjCache) return adjCache;
+  const url = new URL('./adjacencies.csv', import.meta.url);
+  const res = await fetch(url as any, { cache: 'no-cache' });
+  if (!res.ok) throw new Error('Falha ao carregar adjacencies.csv');
+  const text = await res.text();
+  const rows = await parseCSVObjects(text);
+  const graph: AdjacencyGraph = new Map();
+  function addEdge(a: string, b: string) {
+    if (!graph.has(a)) graph.set(a, new Set());
+    if (!graph.has(b)) graph.set(b, new Set());
+    graph.get(a)!.add(b);
+    graph.get(b)!.add(a);
+  }
+  for (const r of rows) {
+    const a = extractQId((r['station'] || '').trim());
+    const b = extractQId((r['adjacent_station'] || r['adjacent'] || '').trim());
+    if (!a || !b) continue;
+    addEdge(a, b);
+  }
+  adjCache = graph;
+  return graph;
+}
+
+export function bfsDistances(start: Station, graph: AdjacencyGraph): Map<string, number> {
+  const dist = new Map<string, number>();
+  const q: string[] = [start.wikidataId];
+  dist.set(start.wikidataId, 0);
+  while (q.length) {
+    const cur = q.shift()!;
+    const d = dist.get(cur)!;
+    const nbrs = graph.get(cur);
+    if (!nbrs) continue;
+    for (const n of nbrs) {
+      if (!dist.has(n)) {
+        dist.set(n, d + 1);
+        q.push(n);
+      }
+    }
+  }
+  return dist;
 }
 

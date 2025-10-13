@@ -4,18 +4,22 @@ body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-seri
 
 .topbar { display:flex; align-items:center; justify-content:space-between; padding:12px 16px; border-bottom:1px solid #222; position:sticky; top:0; background:#0f0f0f; z-index:10; }
 .topbar h1 { font-size:18px; margin:0; }
-.topbar .actions button { margin-left:8px; }
+.topbar .actions { display:flex; align-items:center; gap:8px; }
+.topbar .actions button { background: transparent; border: 1px solid #444; color: #fff; width:36px; height:36px; border-radius: 999px; display:flex; align-items:center; justify-content:center; }
 
-.container { max-width:720px; margin:0 auto; padding:16px; }
+.container { max-width:720px; margin:0 auto; padding:16px; padding-bottom: 180px; }
 
-.map { margin:8px 0 16px; position: relative; }
-.map-image { width:100%; aspect-ratio: 1/1; background:#111; border:1px solid #222; border-radius:8px; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+.map { margin:8px 0 12px; position: relative; }
+.map-image { width:100%; aspect-ratio: 1/1; background:#111; border:1px solid #222; border-radius:8px; display:flex; align-items:center; justify-content:center; overflow:hidden; max-height: 32vh; height: auto; }
 .placeholder { color:#888; font-size:14px; text-align:center; padding:8px; }
 
 .input-area { display:flex; flex-direction:column; gap:8px; }
-#guessForm { display:flex; gap:8px; }
+#guessForm { display:flex; gap:8px; align-items: center; }
 #guessInput { flex:1; padding:12px; border-radius:8px; border:1px solid #333; background:#161616; color:#f2f2f2; }
+#guessForm .form-actions { display:flex; gap:8px; }
 #guessForm button { padding:12px 16px; border-radius:8px; border:1px solid #333; background:#222; color:#fff; }
+#backspaceBtn { min-width:48px; }
+#okBtn { min-width:64px; }
 .hint { color:#aaa; font-size:12px; min-height:18px; }
 
 .guesses { margin-top:12px; display:flex; flex-direction:column; gap:8px; }
@@ -23,9 +27,12 @@ body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-seri
 .guess .name { font-weight:600; }
 .lines { display:flex; gap:4px; flex-wrap:wrap; }
 .line-chip { width:18px; height:18px; border-radius:4px; border:1px solid rgba(255,255,255,0.25); display:inline-block; position: relative; }
-.line-chip.miss { filter: grayscale(1) brightness(0.6); opacity: 0.6; }
+.line-chip.miss { opacity: 0.7; }
 .line-chip.miss::after { content: '✕'; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #ff3b3b; font-weight: 700; font-size: 14px; text-shadow: 0 0 2px rgba(0,0,0,0.6); }
-
+ 
+/* Inline distance badge next to name */
+.dist-badge { color:#ccc; font-size:12px; background:#1f1f1f; border:1px solid #333; padding:2px 6px; border-radius:999px; margin-left:8px; white-space:nowrap; }
+ 
 .share-area { display:flex; align-items:center; gap:8px; margin-top:16px; }
 #shareBtn { padding:10px 14px; border-radius:8px; border:1px solid #333; background:#2e2e2e; color:#fff; }
 .share-msg { font-size:12px; color:#aaa; min-height: 18px; }
@@ -34,14 +41,15 @@ body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-seri
 .stat { font-size:24px; font-weight:700; text-align:center; }
 .stat-label { font-size:12px; color:#ccc; text-align:center; }
 
-.keyboard { display:flex; flex-direction:column; gap:6px; margin-top:8px; }
+.keyboard { display:flex; flex-direction:column; gap:6px; margin-top:8px; position: fixed; left: 0; right: 0; bottom: 0; padding: 10px 16px; background: #0f0f0f; border-top: 1px solid #222; z-index: 30; }
 .kb-row { display:grid; grid-template-columns: repeat(10, 1fr); gap:6px; }
 .kb-row:nth-child(2) { padding: 0 18px; grid-template-columns: repeat(9, 1fr); }
 .kb-row:nth-child(3) { padding: 0 40px; grid-template-columns: repeat(7, 1fr); }
-.key { padding:10px 0; text-align:center; border-radius:8px; border:1px solid #333; background:#1e1e1e; color:#fff; user-select:none; }
+.key { padding:12px 8px; text-align:center; border-radius:8px; border:1px solid #333; background:#1e1e1e; color:#fff; user-select:none; }
 .key[data-disabled="true"] { opacity:0.35; filter:grayscale(0.8); }
 .key.wide { grid-column: span 2; min-width: 88px; }
 .key.action { background:#2a2a2a; }
+.key.dash { min-width:48px; }
 
 /* Center utility row */
 .kb-row.util { display:flex; justify-content:center; gap:6px; }
@@ -51,11 +59,26 @@ body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-seri
 /* Suggestions overlay bounded to the map area */
 .suggestions { display:none; position:absolute; top:8px; left:8px; right:8px; bottom:8px; overflow:auto; z-index: 20; padding: 0; }
 .suggestions:empty { display:none; }
-.suggestion-item { width:100%; text-align:left; padding:10px 12px; border:1px solid #2a2a2a; background:rgba(20,20,20,0.95); color:#fff; border-radius:8px; margin-top:6px; box-shadow: 0 6px 16px rgba(0,0,0,0.35); }
+.suggestion-item { width:100%; text-align:left; padding:10px 12px; border:1px solid #2a2a2a; background:rgba(20,20,20,0.95); color:#fff; border-radius:8px; margin-top:6px; box-shadow: 0 6px 16px rgba(0,0,0,0.35); display:flex; align-items:center; justify-content:space-between; }
 .suggestion-item:hover { background:#222; }
 
 dialog { border:1px solid #333; border-radius:12px; padding:16px; background:#171717; color:#fff; }
 button { cursor:pointer; }
+
+/* Suggestions list layout */
+.suggestion-item .sugg-name { flex: 1; margin-right: 8px; }
+.suggestion-item .lines { flex-shrink: 0; }
+
+/* Leaner guess rows */
+.guess { padding:8px; }
+.line-chip { width:14px; height:14px; }
+
+/* Stats histogram */
+.hist { display:flex; align-items:flex-end; gap:8px; height:140px; margin:12px 0; }
+.hist .bar { flex:1; background:#1e1e1e; border:1px solid #333; border-bottom: none; position:relative; border-radius:6px 6px 0 0; display:flex; align-items:flex-end; justify-content:center; }
+.hist .bar .count { position:absolute; top:-18px; font-size:12px; color:#ccc; }
+.hist .bar .label { position:absolute; bottom:-18px; font-size:12px; color:#aaa; }
+.hist .bar .fill { width:100%; background:#2f6; border-radius:6px 6px 0 0; }
 
 .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); border:0; }
 

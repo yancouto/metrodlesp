@@ -55,8 +55,3 @@ Build and release
 Roadmap / TODO
 - Replace map placeholder with a real image set for each station (no names/line colors). Add imageUrl for stations.
 - Expand station dataset to full CPTM network.
-- Add settings (theme, language, colorblind mode with patterns on chips).
-- Add keyboard (virtual) for mobile convenience.
-- Add distance/hint mechanics (e.g., show how many stops away or direction).
-- Add basic unit tests for logic (hashing, daily pick, stats updates).
-- PWA: add manifest, icons, service worker for offline play.

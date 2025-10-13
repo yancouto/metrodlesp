@@ -14,13 +14,13 @@ class SimpleResponse {
 // Install a fetch that ignores the incoming URL and reads the CSV from disk.
 // stationLoader calls fetch('./src/stations.csv'), but Node's fetch does not
 // support relative file paths in all environments. We provide a stable shim.
-(globalThis as any).fetch = async (_url: string) => {
-  const csvPath = resolve(process.cwd(), 'src', 'stations.csv');
+(globalThis as any).fetch = async (url: URL) => {
+  const csvPath = resolve(process.cwd(), 'src', url.pathname.split('/').pop()!);
   const content = await readFile(csvPath, 'utf8');
   return new SimpleResponse(content) as any;
 };
 
-import { loadStations, type Station, type LineId } from '../stationLoader.js';
+import {loadStations, type Station, type LineId, loadAdjacencyGraph, bfsDistances} from '../stationLoader.js';
 import { LINES } from '../lines.js';
 
 test('loadStations returns well-formed stations and valid lines', async () => {
@@ -47,10 +47,20 @@ test('loadStations returns well-formed stations and valid lines', async () => {
     assert.ok(!/^Estação\b/i.test(s.name), 'name should not start with "Estação"');
     assert.ok(Array.isArray(s.lines), 'lines must be an array');
     assert.ok(s.lines.length > 0, 'station should have at least one line');
+    assert.deepEqual(s.lines, [...s.lines].sort(), 'lines should be sorted');
+    assert.equal(typeof (s as any).wikidataId, 'string', 'wikidataId must be present');
+    assert.match((s as any).wikidataId, /^Q\d+$/, 'wikidataId should look like Q1234');
     for (const l of s.lines) {
       assert.equal(typeof l, 'string');
       assert.ok(lineIds.has(l), `unknown line id: ${l}`);
     }
+  }
+
+  const adj = await loadAdjacencyGraph();
+  for(const s of stations) {
+    const dist = bfsDistances(s, adj);
+    assert.ok(stations.every(ns => dist.has(ns.wikidataId)), 'all stations reachable');
+    assert.ok([...dist.values()].every(d => d >= 0), 'distances should be non-negative');
   }
 });
 
@@ -70,3 +80,4 @@ test('LINES integrity: ids are numeric-like and have name/color', () => {
     assert.ok(/^#?[0-9a-fA-F]{3,8}$/.test(line.color) || line.color.startsWith('rgb'), 'color should look like a CSS color');
   }
 });
+

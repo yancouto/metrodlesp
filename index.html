@@ -24,24 +24,36 @@
       <div id="suggestions" class="suggestions" aria-live="polite"></div>
     </section>
 
+    <section id="guesses" class="guesses" aria-live="polite"></section>
+
     <section class="input-area">
       <form id="guessForm" autocomplete="off">
         <label for="guessInput" class="sr-only">Digite o nome da estação ou da linha</label>
         <input id="guessInput" name="guess" type="text" placeholder="Estação ou linha..." autocomplete="off" autocapitalize="none" autocorrect="off" required />
         <datalist id="stationsList"></datalist>
-        <button type="submit">OK</button>
+        <div class="form-actions">
+          <button id="backspaceBtn" type="button" aria-label="Apagar">⌫</button>
+          <button id="okBtn" type="submit">OK</button>
+        </div>
       </form>
-      <div id="keyboard" class="keyboard" aria-label="Teclado virtual"></div>
+
       <div id="hint" class="hint"></div>
+      <div id="keyboard" class="keyboard" aria-label="Teclado virtual"></div>
     </section>
 
-    <section id="guesses" class="guesses" aria-live="polite"></section>
-
-    <section class="share-area">
+    <section class="share-area" style="display:none">
       <button id="shareBtn" disabled>Compartilhar resultado</button>
       <div id="shareMsg" class="share-msg" role="status"></div>
     </section>
   </main>
+
+  <dialog id="endDialog">
+    <h2>Concluído</h2>
+    <p id="endSummary"></p>
+    <button id="endShareBtn">Compartilhar resultado</button>
+    <div id="endShareMsg" class="share-msg" role="status"></div>
+    <button id="endCloseBtn">Fechar</button>
+  </dialog>
 
   <dialog id="helpDialog">
     <h2>Como jogar</h2>
@@ -62,6 +74,7 @@
       <div><div id="statStreak" class="stat">0</div><div class="stat-label">Sequência</div></div>
       <div><div id="statBest" class="stat">0</div><div class="stat-label">Melhor</div></div>
     </div>
+    <div id="guessHist" class="hist" aria-label="Distribuição de vitórias por tentativas"></div>
     <button id="statsClose">Fechar</button>
   </dialog>
 
