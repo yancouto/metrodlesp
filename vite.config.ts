@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite';
+import {defineConfig} from 'vite';
 
 // Vite configuration for Metrodle SP
 // - Serves index.html at project root
@@ -6,6 +6,7 @@ import { defineConfig } from 'vite';
 // - Outputs production build to ./build to avoid clashing with tsc's ./dist used by tests
 export default defineConfig({
   root: '.',
+  base: '/metrodlesp/',
   server: {
     port: 5173,
     open: false,
