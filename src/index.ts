@@ -5,6 +5,10 @@ import * as state from './state.js';
 import {GameState, Stats} from './state.js';
 import * as logic from "./logic";
 import {normalize} from "./logic";
+// @ts-ignore
+import mapUrl from './map/map.html?url';
+// @ts-ignore
+import linesUrl from './map/lines.geojson?url';
 
 let STATIONS: Station[];
 let DIST_FROM_SOLUTION: Map<string, number>; // keyed by wikidataId
@@ -316,11 +320,13 @@ function renderMap() {
 		params.set('lat', String(solution.lat));
 		params.set('z', '15'); // default zoom
 	}
+	params.set('lines', linesUrl);
 	const iframe = document.createElement('iframe');
 	// Append MapTiler key if available via Vite env (not present in tests/build output)
 	const VITE_KEY = (import.meta as any).env.VITE_MAPTILER_KEY;
 	if (VITE_KEY) params.set('k', VITE_KEY);
-	iframe.src = '/map/map.html' + (params.toString() ? `?${params.toString()}` : '');
+
+	iframe.src = mapUrl + (params.toString() ? `?${params.toString()}` : '');
 	iframe.title = 'Mapa (sem nomes)';
 	iframe.style.width = '100%';
 	iframe.style.height = '100%';

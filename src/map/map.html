@@ -42,7 +42,7 @@
             {type: 'Feature', properties: {name: 'Demo'}, geometry: {type: 'Point', coordinates: [-46.6367, -23.5992]}}
         ]
     };
-    const dataUrl = './lines.geojson';
+    const dataUrl = params.get('lines');
     const geojson = fetch(dataUrl).then(r => r.json()).then(geojson =>
         map.on('load', () => {
             // Base lines layer
