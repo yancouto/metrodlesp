@@ -13,8 +13,38 @@ import linesUrl from './map/lines.geojson?url';
 let STATIONS: Station[];
 let DIST_FROM_SOLUTION: Map<string, number>; // keyed by wikidataId
 
-// Utilities
-const todayKey = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+// Utilities (São Paulo time UTC-3)
+function getSPNow(): Date { // simulate BRT (UTC-3) without DST by shifting clock
+	return new Date(Date.now() - 3 * 60 * 60 * 1000);
+}
+
+function getSPDateKey(): string { // YYYY-MM-DD in SP time
+	return getSPNow().toISOString().slice(0, 10);
+}
+
+function msUntilNextSPMidnight(): number {
+	const spNow = getSPNow();
+	const y = spNow.getUTCFullYear();
+	const m = spNow.getUTCMonth();
+	const d = spNow.getUTCDate();
+	const nextSpMidnightUTC = Date.UTC(y, m, d + 1, 0, 0, 0, 0) + 3 * 60 * 60 * 1000; // shift back to UTC
+	return Math.max(0, nextSpMidnightUTC - Date.now());
+}
+
+function formatHHMMSS(ms: number): string {
+	let s = Math.max(0, Math.floor(ms / 1000));
+	const h = Math.floor(s / 3600);
+	s -= h * 3600;
+	const m = Math.floor(s / 60);
+	s -= m * 60;
+	const pad = (n: number) => n.toString().padStart(2, '0');
+	return `${pad(h)}:${pad(m)}:${pad(s)}`;
+}
+
+let midnightResetTimer: number | null = null;
+let endCountdownTimer: number | null = null;
+
+const todayKey = getSPDateKey();
 
 function stationById(id: string) {
 	return STATIONS.find(s => s.id === id)!;
@@ -82,6 +112,7 @@ const okBtn = document.getElementById('okBtn') as HTMLButtonElement | null;
 const statsSummary = document.getElementById('statsSummary') as HTMLParagraphElement | null;
 const statsShareBtn = document.getElementById('statsShareBtn') as HTMLButtonElement | null;
 const statsShareMsg = document.getElementById('statsShareMsg') as HTMLDivElement | null;
+const nextTimerEl = document.getElementById('nextTimer') as HTMLDivElement | null;
 
 const helpDialog = document.getElementById('helpDialog') as HTMLDialogElement;
 const helpBtn = document.getElementById('helpBtn') as HTMLButtonElement;
@@ -122,6 +153,15 @@ function renderGuesses() {
 }
 
 function renderStats() {
+	// Update countdown UI if game ended
+	if (nextTimerEl) {
+		if (gameState.status === 'playing') {
+			nextTimerEl.textContent = '';
+		} else {
+			const ms = msUntilNextSPMidnight();
+			nextTimerEl.textContent = `Próximo jogo em ${formatHHMMSS(ms)}`;
+		}
+	}
 	statPlayed.textContent = String(stats.played);
 	statWin.textContent = String(stats.wins);
 	statStreak.textContent = String(stats.streak);
@@ -240,6 +280,40 @@ if (suggestionsEl) {
 	});
 }
 
+function startEndCountdown() {
+	if (endCountdownTimer) {
+		clearInterval(endCountdownTimer as any);
+		endCountdownTimer = null;
+	}
+	endCountdownTimer = setInterval(() => {
+		if (!nextTimerEl) return;
+		const ms = msUntilNextSPMidnight();
+		nextTimerEl.textContent = `Próximo jogo em ${formatHHMMSS(ms)}`;
+		if (ms <= 0) {
+			clearInterval(endCountdownTimer as any);
+			endCountdownTimer = null;
+			try {
+				location.reload();
+			} catch {
+			}
+		}
+	}, 1000) as unknown as number;
+}
+
+function scheduleMidnightReset() {
+	if (midnightResetTimer) {
+		clearTimeout(midnightResetTimer as any);
+		midnightResetTimer = null;
+	}
+	const ms = msUntilNextSPMidnight();
+	midnightResetTimer = setTimeout(() => {
+		try {
+			location.reload();
+		} catch {
+		}
+	}, ms) as unknown as number;
+}
+
 function endGame(won: boolean) {
 	gameState.status = won ? 'won' : 'lost';
 	state.saveState(gameState);
@@ -262,6 +336,8 @@ function endGame(won: boolean) {
 	// Disable interactive input and refresh UI
 	updatePlayableUI();
 	renderStats();
+	// Start next-day countdown in stats dialog
+	startEndCountdown();
 	// Show stats dialog upon completion
 	try {
 		statsDialog.showModal();
@@ -391,7 +467,13 @@ function initUI() {
 	});
 
 	helpBtn.addEventListener('click', () => helpDialog.showModal());
-	helpClose.addEventListener('click', () => helpDialog.close());
+	helpClose.addEventListener('click', () => {
+		helpDialog.close();
+		try {
+			localStorage.setItem('seenHelpV1', '1');
+		} catch {
+		}
+	});
 	statsBtn.addEventListener('click', () => {
 		renderStats();
 		statsDialog.showModal();
@@ -417,6 +499,7 @@ function initUI() {
 
 // Boot: load stations from CSV (required) then init UI
 async function boot() {
+	scheduleMidnightReset();
 	STATIONS = await loadStations();
 	gameState = state.loadState(todayKey, STATIONS);
 	stats = state.loadStats();
@@ -424,6 +507,13 @@ async function boot() {
 	let ADJ_GRAPH = await loadAdjacencyGraph();
 	DIST_FROM_SOLUTION = bfsDistances(solution, ADJ_GRAPH);
 	initUI();
+	// Auto-open help on first run
+	try {
+		if (!localStorage.getItem('seenHelpV1')) {
+			helpDialog.showModal();
+		}
+	} catch {
+	}
 }
 
 // Start app

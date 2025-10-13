@@ -160,6 +160,14 @@ button { cursor:pointer; }
 /* Stats histogram */
 .hist { display:flex; align-items:flex-end; gap:8px; height:140px; margin:12px 0; }
 
+/* Next day timer */
+.next-timer {
+    text-align: center;
+    margin-top: 6px;
+    color: #ccc;
+    font-size: 14px;
+}
+
 .hist .bar {
     flex: 1;
     height: 100%;
@@ -282,4 +290,18 @@ button:disabled {
 #guessInput:focus {
     border-color: #555;
     box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.08) inset;
+}
+
+
+/* Desktop: constrain and center the fixed keyboard so it isn't full width */
+@media (min-width: 900px) {
+    .keyboard {
+        left: 50%;
+        right: auto;
+        width: min(720px, 100%);
+        transform: translateX(-50%);
+        border-left: 1px solid #222;
+        border-right: 1px solid #222;
+        border-radius: 12px 12px 0 0;
+    }
 }
