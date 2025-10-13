@@ -320,7 +320,7 @@ function renderMap() {
 	// Append MapTiler key if available via Vite env (not present in tests/build output)
 	const VITE_KEY = (import.meta as any).env.VITE_MAPTILER_KEY;
 	if (VITE_KEY) params.set('k', VITE_KEY);
-	iframe.src = '/src/map/map.html' + (params.toString() ? `?${params.toString()}` : '');
+	iframe.src = '/map/map.html' + (params.toString() ? `?${params.toString()}` : '');
 	iframe.title = 'Mapa (sem nomes)';
 	iframe.style.width = '100%';
 	iframe.style.height = '100%';
