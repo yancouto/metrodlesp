@@ -2,12 +2,26 @@
 html, body { margin: 0; padding: 0; height: 100%; }
 body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background:#0f0f0f; color:#f2f2f2; }
 
-.topbar { display:flex; align-items:center; justify-content:space-between; padding:12px 16px; border-bottom:1px solid #222; position:sticky; top:0; background:#0f0f0f; z-index:10; }
+.topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    border-bottom: 1px solid #222;
+    position: sticky;
+    top: 0;
+    background: #0f0f0f;
+    z-index: 10;
+}
 .topbar h1 { font-size:18px; margin:0; }
 .topbar .actions { display:flex; align-items:center; gap:8px; }
 .topbar .actions button { background: transparent; border: 1px solid #444; color: #fff; width:36px; height:36px; border-radius: 999px; display:flex; align-items:center; justify-content:center; }
 
-.container { max-width:720px; margin:0 auto; padding:16px; padding-bottom: 180px; }
+.container {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 16px;
+}
 
 .map { margin:8px 0 12px; position: relative; }
 .map-image { width:100%; aspect-ratio: 1/1; background:#111; border:1px solid #222; border-radius:8px; display:flex; align-items:center; justify-content:center; overflow:hidden; max-height: 32vh; height: auto; }
@@ -47,7 +61,21 @@ body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-seri
 .stat { font-size:24px; font-weight:700; text-align:center; }
 .stat-label { font-size:12px; color:#ccc; text-align:center; }
 
-.keyboard { display:flex; flex-direction:column; gap:6px; margin-top:8px; position: fixed; left: 0; right: 0; bottom: 0; padding: 10px 16px; background: #0f0f0f; border-top: 1px solid #222; z-index: 30; }
+.keyboard {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 8px;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 10px 16px;
+    padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+    background: #0f0f0f;
+    border-top: 1px solid #222;
+    z-index: 30;
+}
 .kb-row { display:grid; grid-template-columns: repeat(10, 1fr); gap:6px; }
 .kb-row:nth-child(2) { padding: 0 18px; grid-template-columns: repeat(9, 1fr); }
 .kb-row:nth-child(3) { padding: 0 40px; grid-template-columns: repeat(7, 1fr); }
@@ -177,7 +205,16 @@ button { cursor:pointer; }
 }
 
 :root {
-    --kb-h: 180px;
+    --kb-h: 192px; /* virtual keyboard height reservation */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --bg: #0f0f0f;
+    --fg: #f2f2f2;
+    --muted: #aaa;
+    --card: #141414;
+    --border: #222;
 }
 
 /* Layout adjustments to keep input and keyboard always visible */
@@ -185,19 +222,20 @@ button { cursor:pointer; }
     display: flex;
     flex-direction: column;
     min-height: 100dvh; /* account for mobile dynamic viewport */
-    padding-bottom: var(--kb-h);
+    padding-bottom: calc(var(--kb-h) + env(safe-area-inset-bottom, 0px) + 8px);
 }
 
 /* Make the guesses area able to shrink and scroll when space is tight */
 .guesses {
     flex: 1 1 auto;
     overflow: auto;
+    overscroll-behavior: contain;
 }
 
 /* Keep the input area visible above the fixed keyboard */
 .input-area {
     position: sticky;
-    bottom: 188px; /* keep above fixed keyboard */
+    bottom: calc(var(--kb-h) + env(safe-area-inset-bottom, 0px)); /* keep above fixed keyboard */
     background: #0f0f0f;
     padding-bottom: 8px;
     z-index: 25;
@@ -225,7 +263,23 @@ button { cursor:pointer; }
     }
 }
 
-/* Override correct root selector (fix for earlier typo) */
-:root {
-    --kb-h: 180px;
+
+/* Accessibility and interaction polish */
+button:focus-visible, input:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 2px;
+}
+
+button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.topbar .actions button:hover {
+    background: #1a1a1a;
+}
+
+#guessInput:focus {
+    border-color: #555;
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.08) inset;
 }
