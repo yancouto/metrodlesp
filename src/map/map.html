@@ -16,7 +16,7 @@
 <script>
     const WIDTH = 512, HEIGHT = 512; // or 640x640
     const MAPTILER_KEY = new URLSearchParams(location.search).get('k');
-    const styleUrl = `https://api.maptiler.com/maps/bright/style.json?key=${MAPTILER_KEY}`;
+    const styleUrl = `https://api.maptiler.com/maps/basic/style.json?key=${MAPTILER_KEY}`;
 
     // Read center from URL query params if provided
     const params = new URLSearchParams(location.search);
@@ -45,6 +45,7 @@
     const dataUrl = './lines.geojson';
     const geojson = fetch(dataUrl).then(r => r.json()).then(geojson =>
         map.on('load', () => {
+            // Base lines layer
             map.addSource('custom-geojson', {type: 'geojson', data: geojson});
             map.addLayer({
                 id: 'custom-lines',
@@ -57,6 +58,40 @@
                     'line-opacity': 1.0
                 }
             });
+
+            // Add a center-point source and circle layer to highlight the target location
+            map.addSource('center-point', {
+                type: 'geojson',
+                data: {
+                    type: 'FeatureCollection',
+                    features: []
+                }
+            });
+            map.addLayer({
+                id: 'center-circle',
+                type: 'circle',
+                source: 'center-point',
+                paint: {
+                    // semi-transparent fill with a bright white stroke so it stands out
+                    'circle-radius': 8,
+                    'circle-color': 'rgba(0,0,0,0.67)',
+                    'circle-stroke-color': '#000',
+                    'circle-stroke-width': 2
+                }
+            });
+
+            // Initialize the center circle with provided query params or current center
+            const has = Number.isFinite(qLon) && Number.isFinite(qLat);
+            const center = has ? [qLon, qLat] : map.getCenter().toArray();
+            const src = map.getSource('center-point');
+            if (src) {
+                src.setData({
+                    type: 'FeatureCollection',
+                    features: [
+                        {type: 'Feature', properties: {}, geometry: {type: 'Point', coordinates: center}}
+                    ]
+                });
+            }
         })
     );
 
@@ -79,6 +114,16 @@
             map.once('idle', () => {
                 resolve(map.getCanvas().toDataURL('image/png'));
             });
+            // Update center circle position if the layer/source exist
+            const src = map.getSource && map.getSource('center-point');
+            if (src && src.setData) {
+                src.setData({
+                    type: 'FeatureCollection',
+                    features: [
+                        {type: 'Feature', properties: {}, geometry: {type: 'Point', coordinates: [lon, lat]}}
+                    ]
+                });
+            }
             map.jumpTo({center: [lon, lat], zoom});
         });
     };
