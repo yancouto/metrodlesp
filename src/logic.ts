@@ -75,5 +75,5 @@ export function buildShare(
 	});
 	const attempts = state.status === 'won' ? state.guesses.length : 'X';
 	const title = `Metrodle SP ${state.dateKey}`;
-	return [title, ...rows, ` ${attempts}/6`, 'yancouto.github.io/metrodlesp'].join('\n');
+	return [title, ...rows, `${attempts}/6`, 'yancouto.github.io/metrodlesp'].join('\n');
 }
