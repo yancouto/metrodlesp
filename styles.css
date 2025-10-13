@@ -175,3 +175,57 @@ button { cursor:pointer; }
 @media (min-width: 700px) {
   .map-image { aspect-ratio: 16/9; }
 }
+
+:root {
+    --kb-h: 180px;
+}
+
+/* Layout adjustments to keep input and keyboard always visible */
+.container {
+    display: flex;
+    flex-direction: column;
+    min-height: 100dvh; /* account for mobile dynamic viewport */
+    padding-bottom: var(--kb-h);
+}
+
+/* Make the guesses area able to shrink and scroll when space is tight */
+.guesses {
+    flex: 1 1 auto;
+    overflow: auto;
+}
+
+/* Keep the input area visible above the fixed keyboard */
+.input-area {
+    position: sticky;
+    bottom: 188px; /* keep above fixed keyboard */
+    background: #0f0f0f;
+    padding-bottom: 8px;
+    z-index: 25;
+}
+
+/* Further compact the map on short screens to save space for input + keyboard */
+@media (max-height: 700px) {
+    .map-image {
+        max-height: 26vh;
+    }
+}
+
+@media (max-height: 600px) {
+    .map-image {
+        max-height: 22vh;
+    }
+
+    .guess {
+        padding: 6px;
+    }
+
+    .line-chip {
+        width: 12px;
+        height: 12px;
+    }
+}
+
+/* Override correct root selector (fix for earlier typo) */
+:root {
+    --kb-h: 180px;
+}
