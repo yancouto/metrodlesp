@@ -174,7 +174,14 @@ button { cursor:pointer; }
 .line-chip { width:14px; height:14px; }
 
 /* Stats histogram */
-.hist { display:flex; align-items:flex-end; gap:8px; height:140px; margin:12px 0; }
+.hist {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    height: 140px;
+    margin: 12px 0;
+    padding-bottom: 18px;
+}
 
 /* Next day timer */
 .next-timer {
@@ -195,7 +202,7 @@ button { cursor:pointer; }
     display: flex;
     align-items: flex-end;
     justify-content: center;
-    overflow: hidden;
+    overflow: visible;
 }
 .hist .bar .label { position:absolute; bottom:-18px; font-size:12px; color:#aaa; }
 
