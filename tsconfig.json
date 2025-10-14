@@ -9,7 +9,10 @@
     "skipLibCheck": true,
     "sourceMap": true,
     "outDir": "dist",
-    "types": ["node"]
+    "types": [
+      "node",
+      "gtag.js"
+    ]
   },
   "include": ["src"],
   "exclude": ["dist"]

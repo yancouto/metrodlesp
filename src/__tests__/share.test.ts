@@ -27,6 +27,6 @@ test('share text includes title, per-guess lines, attempts, and distances', asyn
 	assert.match(lines[1], /⬛ a \d+ paradas/);
 	assert.match(lines[2], /⬛ a \d+ paradas/);
 	assert.match(lines[3], /🟩 🚆/);
-	assert.equal(lines[4].trim(), '3/6');
-	assert.equal(lines[5].trim(), 'placeholder.com');
+	assert.equal(lines[4], '3/6');
+	assert.equal(lines[5], 'yancouto.github.io/metrodlesp');
 });

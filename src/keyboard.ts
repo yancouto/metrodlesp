@@ -139,7 +139,7 @@ export function initKeyboard(opts: {
 			const enabled = typeof getEnabled === 'function' ? getEnabled() : true;
 			const stations = getStations();
 			const keywords = typeof getKeywords === 'function' ? getKeywords() ?? [] : [];
-			const allowed = enabled ? nextAllowedChars(input.value, stations, keywords) : new Set<string>();
+			const allowed = enabled && input.value.length > 0 ? nextAllowedChars(input.value, stations, keywords) : new Set<string>();
 			const buttons = Array.from(root.querySelectorAll('button.key')) as HTMLButtonElement[];
 			for (const b of buttons) {
 				const v = b.getAttribute('data-value')!;
@@ -151,7 +151,7 @@ export function initKeyboard(opts: {
 					b.dataset.disabled = 'false';
 					continue;
 				}
-				const isAllowed = allowed.has(v);
+				const isAllowed = input.value.length === 0 ? true : allowed.has(v);
 				b.dataset.disabled = isAllowed ? 'false' : 'true';
 				b.disabled = false; // keep clickable; visually indicate via data-disabled
 			}

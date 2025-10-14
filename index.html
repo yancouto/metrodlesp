@@ -22,6 +22,19 @@
   <meta name="theme-color" content="#111" />
 </head>
 <body>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-61X7Z80Y79"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+
+  function gtag() {
+    dataLayer.push(arguments);
+  }
+
+  gtag('js', new Date());
+
+  gtag('config', 'G-61X7Z80Y79');
+</script>
   <header class="topbar">
     <h1>Metrodle SP <span class="tagline">Que estação é essa?</span></h1>
     <div class="actions">
@@ -72,6 +85,7 @@
   <dialog id="helpDialog">
     <h2>Como jogar</h2>
     <ul>
+      <li>O objetivo é acertar a estação de metrô do mapa.</li>
       <li>Há um novo desafio por dia. Você tem 6 tentativas.</li>
       <li>Digite o nome da estação (ou da linha) para buscar e tentar.</li>
       <li>Após um palpite errado, você verá se as cores das linhas da estação fazem parte da estação alvo, e a

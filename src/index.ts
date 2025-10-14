@@ -272,7 +272,11 @@ if (suggestionsEl) {
 			const id = el.getAttribute('data-id')!;
 			const st = stationById(id);
 			guessInput.value = st.name;
-			guessInput.focus();
+			// Avoid focusing the input on mobile to prevent native keyboard
+			try {
+				guessInput.blur();
+			} catch {
+			}
 			refreshDatalist();
 			renderSuggestions();
 			if (keyboard) keyboard.update();
@@ -316,6 +320,7 @@ function scheduleMidnightReset() {
 
 function endGame(won: boolean) {
 	gameState.status = won ? 'won' : 'lost';
+	gtag('event', 'finished', {value: gameState.status});
 	state.saveState(gameState);
 	// update stats once per day
 	if (stats.lastDate !== gameState.dateKey) {
@@ -361,6 +366,7 @@ function onSubmitGuess(name: string) {
 	const solution = stationById(gameState.solutionId);
 	const match = stationByName(name) || STATIONS.find(s => s.name.toLowerCase().includes(name.trim().toLowerCase()));
 	if (!match) {
+		gtag('event', 'guess_fail', {value: "not_found"});
 		setHint('Estação não encontrada.');
 		return;
 	}
@@ -372,6 +378,7 @@ function onSubmitGuess(name: string) {
 		setHint('O jogo de hoje terminou.');
 		return;
 	}
+	gtag('event', 'guess');
 	gameState.guesses.push(match.id);
 	state.saveState(gameState);
 	renderGuesses();
@@ -426,6 +433,26 @@ function initUI() {
 	renderMap();
 	shareBtn.disabled = gameState.status === 'playing';
 	updatePlayableUI();
+
+	// On touch/mobile devices, prevent the native keyboard from opening
+	try {
+		const isTouch = (('ontouchstart' in window) || (navigator.maxTouchPoints || 0) > 0);
+		if (isTouch) {
+			guessInput.readOnly = true; // programmatic updates still work
+			// If it somehow gains focus, blur immediately
+			guessInput.addEventListener('focus', () => {
+				try {
+					guessInput.blur();
+				} catch {
+				}
+			}, true);
+			// Prevent default touch behavior that would try to focus
+			guessInput.addEventListener('touchstart', (ev) => {
+				ev.preventDefault();
+			});
+		}
+	} catch {
+	}
 
 	// Initialize keyboard module
 	keyboard = initKeyboard({
