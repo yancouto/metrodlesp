@@ -65,3 +65,35 @@ test('LINES integrity: ids are numeric-like and have name/color', () => {
 	}
 });
 
+test('interchange stations have distance 0 (Consolação-Paulista)', async () => {
+	const stations = await loadStations();
+	const adj = await loadAdjacencyGraph();
+	
+	const consolacao = stations.find(s => s.id === 'CNS');
+	const paulista = stations.find(s => s.id === 'PTA');
+	
+	assert.ok(consolacao, 'Consolação station should exist');
+	assert.ok(paulista, 'Paulista station should exist');
+	
+	const distFromConsolacao = bfsDistances(consolacao!, adj);
+	const distFromPaulista = bfsDistances(paulista!, adj);
+	
+	assert.equal(distFromConsolacao.get(paulista!.wikidataId), 0, 'Distance from Consolação to Paulista should be 0');
+	assert.equal(distFromPaulista.get(consolacao!.wikidataId), 0, 'Distance from Paulista to Consolação should be 0');
+});
+
+test('Luz to Clínicas distance is 4', async () => {
+	const stations = await loadStations();
+	const adj = await loadAdjacencyGraph();
+	
+	const luz = stations.find(s => s.id === 'LUZ');
+	const clinicas = stations.find(s => s.id === 'CLI');
+	
+	assert.ok(luz, 'Luz station should exist');
+	assert.ok(clinicas, 'Clínicas station should exist');
+	
+	const distFromLuz = bfsDistances(luz!, adj);
+	
+	assert.equal(distFromLuz.get(clinicas!.wikidataId), 4, 'Distance from Luz to Clínicas should be 4');
+});
+

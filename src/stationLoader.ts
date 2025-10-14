@@ -25,6 +25,17 @@ SELECT ?station ?adjacent_station WHERE {
 }
 ORDER BY (?station)
 
+# São Paulo Metro station interchanges
+SELECT ?station ?interchange_station WHERE {
+  ?station wdt:P31 wd:Q928830.
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "pt,en". }
+  ?station wdt:P16 wd:Q483343;
+    wdt:P5817 wd:Q55654238;
+    wdt:P1192 ?interchange_station.
+  ?interchange_station wdt:P5817 wd:Q55654238.
+}
+ORDER BY (?station)
+
 */
 
 // This module exports an async function `loadStations()` that reads ./src/stations.csv
@@ -152,6 +163,12 @@ export async function loadStations(): Promise<Station[]> {
 
 export type AdjacencyGraph = Map<string, Set<string>>; // wikidataId -> neighbors (wikidataId)
 let adjCache: AdjacencyGraph | null = null;
+let interchangeCache: Set<string> | null = null; // Set of "Q1-Q2" pairs representing 0-distance connections
+
+function makeInterchangeKey(a: string, b: string): string {
+	// Ensure consistent ordering
+	return a < b ? `${a}-${b}` : `${b}-${a}`;
+}
 
 export async function loadAdjacencyGraph(): Promise<AdjacencyGraph> {
 	if (adjCache) return adjCache;
@@ -175,7 +192,25 @@ export async function loadAdjacencyGraph(): Promise<AdjacencyGraph> {
 		if (!a || !b) continue;
 		addEdge(a, b);
 	}
+
+	// Load interchanges (connections between stations with 0 distance)
+	const interchanges = new Set<string>();
+	const interchangeUrl = new URL('./interchanges.csv', import.meta.url);
+	const interchangeRes = await fetch(interchangeUrl as any, {cache: 'no-cache'});
+	if (interchangeRes.ok) {
+		const interchangeText = await interchangeRes.text();
+		const interchangeRows = await parseCSVObjects(interchangeText);
+		for (const r of interchangeRows) {
+			const a = extractQId((r['station'] || '').trim());
+			const b = extractQId((r['interchange_station'] || '').trim());
+			if (!a || !b) continue;
+			addEdge(a, b);
+			interchanges.add(makeInterchangeKey(a, b));
+		}
+	}
+
 	adjCache = graph;
+	interchangeCache = interchanges;
 	return graph;
 }
 
@@ -190,7 +225,9 @@ export function bfsDistances(start: Station, graph: AdjacencyGraph): Map<string,
 		if (!nbrs) continue;
 		for (const n of nbrs) {
 			if (!dist.has(n)) {
-				dist.set(n, d + 1);
+				// Check if this is an interchange (0 distance)
+				const isInterchange = interchangeCache?.has(makeInterchangeKey(cur, n)) ?? false;
+				dist.set(n, isInterchange ? d : d + 1);
 				q.push(n);
 			}
 		}

@@ -72,6 +72,7 @@ Notes:
     - Fields consumed include: station_code (used as Station.id), stationLabel (name; leading "Estação" stripped), line
       numbers (numeric IDs), wikidata item (stored as wikidataId), coordinate_location (parsed to lat/lon when present)
 - Adjacencies: src/adjacencies.csv (pairs of Wikidata IDs defining neighboring stations). Used to compute BFS distances.
+- Interchanges: src/interchanges.csv (pairs of Wikidata IDs defining interchange connections with 0 distance between physically connected stations on different lines)
 - Lines: src/lines.ts (single source of truth for line IDs, names, and colors)
 - The loader aggregates lines per station and ignores invalid/unknown rows. Unit tests validate that all station lines
   exist in LINES and that station data is well‑formed.
