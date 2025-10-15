@@ -169,17 +169,17 @@ export async function loadStations(): Promise<Station[]> {
 export type AdjacencyGraph = { adjacent: Map<string, Set<string>>, interchange: Map<string, Set<string>> };
 let adjCache: AdjacencyGraph | null = null;
 
-// @ts-ignore
-import adjUrl from './adjacencies.csv?url';
-// @ts-ignore
-import interUrl from './interchanges.csv?url';
 
 export async function loadAdjacencyGraph(): Promise<AdjacencyGraph> {
-	if (adjCache === null)
+	if (adjCache === null) {
+		const adjUrl = new URL('./adjacencies.csv', import.meta.url);
+		const interUrl = new URL('./interchanges.csv', import.meta.url);
 		adjCache = {
 			adjacent: await loadAdjacencyCsv(adjUrl, 'station', 'adjacent_station'),
 			interchange: await loadAdjacencyCsv(interUrl, 'station', 'interchange_station')
 		};
+	}
+
 	return adjCache;
 }
 
