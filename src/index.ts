@@ -80,18 +80,31 @@ function suggestionLineChipsHTML(station: Station, knowledge: { eliminated: Set<
 
 async function shareResult(state: GameState) {
 	const text = logic.buildShare(state, STATIONS, LINES, DIST_FROM_SOLUTION);
-	if ((navigator as any).share) {
+	// Determine if device is touch-capable (mobile/tablet). On desktop, prefer clipboard.
+	let isTouch = false;
+	try {
+		isTouch = (('ontouchstart' in window) || (navigator.maxTouchPoints || 0) > 0);
+	} catch {
+		isTouch = false;
+	}
+	if (isTouch && navigator.share) {
 		try {
-			await (navigator as any).share({text});
+			await navigator.share({text});
 			return 'Compartilhado!';
 		} catch {
+			// fall through to clipboard
 		}
 	}
 	try {
 		await navigator.clipboard.writeText(text);
 		return 'Copiado para a área de transferência!';
 	} catch {
-		return 'Copie manualmente:\n' + text;
+		try {
+			await navigator.share({text});
+			return 'Compartilhado!';
+		} catch {
+			return "Falha ao compartilhar.";
+		}
 	}
 }
 
