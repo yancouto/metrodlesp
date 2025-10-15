@@ -13,9 +13,11 @@ import linesUrl from './map/lines.geojson?url';
 let STATIONS: Station[];
 let DIST_FROM_SOLUTION: Map<string, number>; // keyed by wikidataId
 
+const shiftDays = 0;
+
 // Utilities (São Paulo time UTC-3)
 function getSPNow(): Date { // simulate BRT (UTC-3) without DST by shifting clock
-	return new Date(Date.now() - 3 * 60 * 60 * 1000);
+	return new Date(Date.now() - 3 * 60 * 60 * 1000 + 1000 * 60 * 60 * 24 * shiftDays);
 }
 
 function getSPDateKey(): string { // YYYY-MM-DD in SP time

@@ -126,20 +126,17 @@ export async function loadStations(): Promise<Station[]> {
 	const map = new Map<string, Station>();
 
 	for (const r of rows) {
-		const code = (r['station_code'] || '').trim();
-		if (!code) continue;
-		let name = (r['stationLabel'] || '').trim();
-		if (/^Estação\b/i.test(name)) name = name.replace(/^Estação\s+/i, '').trim();
-		if (name.startsWith('Terminal Intermodal')) continue;
-		const wdUrl = (r['station'] || '').trim();
-		const wikidataId = extractQId(wdUrl);
-		if (!wikidataId) continue; // skip if no wikidata id
-		let entry = map.get(code);
+		// Don't use station code because one station might have multiple codes
+		let name = r['stationLabel']
+			.replace(/^Estação\s+/i, '')
+			.replace(/^Terminal Intermodal\s+/i, '')
+			.replace(/\s*\(metrô\)\s*/i, '')
+			.trim();
+		const wikidataId = extractQId(r["station"])!;
+		let entry = map.get(wikidataId);
 		if (!entry) {
-			entry = {id: code, name, lines: [] as LineId[], wikidataId};
-			map.set(code, entry);
-		} else {
-			entry.wikidataId = wikidataId;
+			entry = {id: wikidataId, name, lines: [] as LineId[], wikidataId};
+			map.set(wikidataId, entry);
 		}
 		// Parse and attach coordinates if present
 		const coordRaw = (r['coordinate_location'] || '').trim();
