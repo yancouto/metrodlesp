@@ -169,18 +169,22 @@ export async function loadStations(): Promise<Station[]> {
 export type AdjacencyGraph = { adjacent: Map<string, Set<string>>, interchange: Map<string, Set<string>> };
 let adjCache: AdjacencyGraph | null = null;
 
+// @ts-ignore
+import adjUrl from './adjacencies.csv?url';
+// @ts-ignore
+import interUrl from './interchanges.csv?url';
+
 export async function loadAdjacencyGraph(): Promise<AdjacencyGraph> {
 	if (adjCache === null)
 		adjCache = {
-			adjacent: await loadAdjacencyCsv('./adjacencies.csv', 'station', 'adjacent_station'),
-			interchange: await loadAdjacencyCsv('./interchanges.csv', 'station', 'interchange_station')
+			adjacent: await loadAdjacencyCsv(adjUrl, 'station', 'adjacent_station'),
+			interchange: await loadAdjacencyCsv(interUrl, 'station', 'interchange_station')
 		};
 	return adjCache;
 }
 
-export async function loadAdjacencyCsv(name: string, a: string, b: string): Promise<Map<string, Set<string>>> {
-	const url = new URL(name, import.meta.url);
-	const res = await fetch(url as any, {cache: 'no-cache'});
+export async function loadAdjacencyCsv(url: URL, a: string, b: string): Promise<Map<string, Set<string>>> {
+	const res = await fetch(url, {cache: 'no-cache'});
 	if (!res.ok) throw new Error('Falha ao carregar adjacencies.csv');
 	const text = await res.text();
 	const rows = await parseCSVObjects(text);
