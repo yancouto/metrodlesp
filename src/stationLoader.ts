@@ -25,6 +25,19 @@ SELECT ?station ?adjacent_station WHERE {
 }
 ORDER BY (?station)
 
+# São Paulo Metro station interchanges
+SELECT ?station ?interchange_station WHERE {
+  ?station wdt:P31 wd:Q928830.
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "pt,en". }
+  ?station wdt:P16 wd:Q483343;
+    wdt:P5817 wd:Q55654238;
+    wdt:P833 ?interchange_station.
+  ?interchange_station wdt:P31 wd:Q928830;
+    wdt:P16 wd:Q483343;
+    wdt:P5817 wd:Q55654238;
+}
+ORDER BY (?station)
+
 */
 
 // This module exports an async function `loadStations()` that reads ./src/stations.csv
@@ -95,10 +108,11 @@ function parsePoint(s: string): { lon: number; lat: number } | null {
 	return {lon: Number(m[1]), lat: Number(m[2])};
 }
 
-function extractQId(url: string): string | null {
+function extractQId(url: string): string {
 	// Expect something like http://www.wikidata.org/entity/Q12345 or https://www.wikidata.org/wiki/Q12345
 	const m = url.match(/Q\d+/i);
-	return m ? m[0].toUpperCase() : null;
+	if (!m) throw new Error(`Invalid wikidata id: ${url}`);
+	return m[0].toUpperCase();
 }
 
 export async function loadStations(): Promise<Station[]> {
@@ -150,48 +164,72 @@ export async function loadStations(): Promise<Station[]> {
 	return stationsCache;
 }
 
-export type AdjacencyGraph = Map<string, Set<string>>; // wikidataId -> neighbors (wikidataId)
+// Based on wikidata ids
+// interchanges are 0-cost transfers
+export type AdjacencyGraph = { adjacent: Map<string, Set<string>>, interchange: Map<string, Set<string>> };
 let adjCache: AdjacencyGraph | null = null;
 
 export async function loadAdjacencyGraph(): Promise<AdjacencyGraph> {
-	if (adjCache) return adjCache;
-	const url = new URL('./adjacencies.csv', import.meta.url);
+	if (adjCache === null)
+		adjCache = {
+			adjacent: await loadAdjacencyCsv('./adjacencies.csv', 'station', 'adjacent_station'),
+			interchange: await loadAdjacencyCsv('./interchanges.csv', 'station', 'interchange_station')
+		};
+	return adjCache;
+}
+
+export async function loadAdjacencyCsv(name: string, a: string, b: string): Promise<Map<string, Set<string>>> {
+	const url = new URL(name, import.meta.url);
 	const res = await fetch(url as any, {cache: 'no-cache'});
 	if (!res.ok) throw new Error('Falha ao carregar adjacencies.csv');
 	const text = await res.text();
 	const rows = await parseCSVObjects(text);
-	const graph: AdjacencyGraph = new Map();
+	const graph = new Map();
 
 	function addEdge(a: string, b: string) {
 		if (!graph.has(a)) graph.set(a, new Set());
-		if (!graph.has(b)) graph.set(b, new Set());
 		graph.get(a)!.add(b);
-		graph.get(b)!.add(a);
 	}
 
-	for (const r of rows) {
-		const a = extractQId((r['station'] || '').trim());
-		const b = extractQId((r['adjacent_station'] || r['adjacent'] || '').trim());
-		if (!a || !b) continue;
-		addEdge(a, b);
-	}
-	adjCache = graph;
+	for (const r of rows)
+		addEdge(extractQId(r[a]), extractQId(r[b]));
 	return graph;
 }
 
 export function bfsDistances(start: Station, graph: AdjacencyGraph): Map<string, number> {
+	// 0-1 BFS using a deque; zeroGraph edges cost 0, graph edges cost 1
 	const dist = new Map<string, number>();
-	const q: string[] = [start.wikidataId];
+	const deque: string[] = [];
+	// eew, shift and unshift are linear
+	const pushFront = (v: string) => deque.unshift(v);
+	const pushBack = (v: string) => deque.push(v);
+	const popFront = () => deque.shift()!;
+
 	dist.set(start.wikidataId, 0);
-	while (q.length) {
-		const cur = q.shift()!;
+	pushFront(start.wikidataId);
+	while (deque.length) {
+		const cur = popFront();
 		const d = dist.get(cur)!;
-		const nbrs = graph.get(cur);
-		if (!nbrs) continue;
-		for (const n of nbrs) {
-			if (!dist.has(n)) {
-				dist.set(n, d + 1);
-				q.push(n);
+		// Zero-cost neighbors first
+		const zeros = graph.interchange.get(cur);
+		if (zeros) {
+			for (const n of zeros) {
+				const nd = d; // zero cost
+				if (!dist.has(n) || nd < dist.get(n)!) {
+					dist.set(n, nd);
+					pushFront(n);
+				}
+			}
+		}
+		// Cost-1 neighbors
+		const nbrs = graph.adjacent.get(cur);
+		if (nbrs) {
+			for (const n of nbrs) {
+				const nd = d + 1;
+				if (!dist.has(n) || nd < dist.get(n)!) {
+					dist.set(n, nd);
+					pushBack(n);
+				}
 			}
 		}
 	}
