@@ -9,10 +9,10 @@ installLocalStorageMock();
 
 test('getKnownLineKnowledge confirms and eliminates lines based on guesses', async () => {
 	const stations = await loadStations();
-	const findById = (id: string) => stations.find(s => s.id === id)!;
-	const SE = findById('PSE'); // Sé (lines '1' and '3')
-	const ANR = findById('ANR'); // Ana Rosa ('1','2')
-	const TAT = findById('TAT'); // Tatuapé ('3')
+	const findByName = (name: string) => stations.find(s => s.name === name)!;
+	const SE = findByName('Sé'); // Sé (lines '1' and '3')
+	const ANR = findByName('Ana Rosa'); // Ana Rosa ('1','2')
+	const TAT = findByName('Tatuapé'); // Tatuapé ('3')
 
 	const state = {solutionId: SE.id, dateKey: '2025-10-12', guesses: [ANR.id, TAT.id], status: 'playing' as const};
 	const {eliminated, confirmed} = getKnownLineKnowledge(state, stations);

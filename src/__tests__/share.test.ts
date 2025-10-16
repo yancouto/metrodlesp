@@ -10,10 +10,10 @@ installLocalStorageMock();
 
 test('share text includes title, per-guess lines, attempts, and distances', async () => {
 	const stations = await loadStations();
-	const findById = (id: string) => stations.find(s => s.id === id)!;
-	const SE = findById('PSE');
-	const ANR = findById('ANR');
-	const REP = findById('REP');
+	const findByName = (name: string) => stations.find(s => s.name === name)!;
+	const SE = findByName('Sé');
+	const ANR = findByName('Ana Rosa');
+	const REP = findByName('República');
 
 	const adj = await loadAdjacencyGraph();
 	const distMap = bfsDistances(SE, adj);

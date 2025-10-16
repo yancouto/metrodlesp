@@ -69,8 +69,8 @@ test('interchange stations have distance 0 (Consolação-Paulista)', async () =>
 	const stations = await loadStations();
 	const adj = await loadAdjacencyGraph();
 
-	const consolacao = stations.find(s => s.id === 'CNS');
-	const paulista = stations.find(s => s.id === 'PTA');
+	const consolacao = stations.find(s => s.name === 'Consolação');
+	const paulista = stations.find(s => s.name === 'Paulista');
 
 	assert.ok(consolacao, 'Consolação station should exist');
 	assert.ok(paulista, 'Paulista station should exist');
@@ -86,8 +86,8 @@ test('Luz to Clínicas distance is 4', async () => {
 	const stations = await loadStations();
 	const adj = await loadAdjacencyGraph();
 
-	const luz = stations.find(s => s.id === 'LUZ');
-	const clinicas = stations.find(s => s.id === 'CLI');
+	const luz = stations.find(s => s.name === 'Luz');
+	const clinicas = stations.find(s => s.name === 'Clínicas');
 
 	assert.ok(luz, 'Luz station should exist');
 	assert.ok(clinicas, 'Clínicas station should exist');
