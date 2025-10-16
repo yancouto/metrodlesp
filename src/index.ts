@@ -147,6 +147,7 @@ function refreshDatalist() {
 	list.innerHTML = cands.map(s => `<option value="${s.name}"></option>`).join('');
 }
 
+
 function renderGuesses() {
 	const solution = stationById(gameState.solutionId);
 	const total = 6;
@@ -159,7 +160,9 @@ function renderGuesses() {
 			const correct = s.id === solution.id;
 			const dist = DIST_FROM_SOLUTION.get(s.wikidataId);
 			const distHtml = !correct && typeof dist === 'number' ? ` <span class="dist-badge">a ${dist} ${dist === 1 ? 'parada' : 'paradas'}</span>` : '';
-			parts.push(`<div class="guess"><div><div class="name">${i + 1}. ${s.name}${correct ? ' ✅' : ''}${distHtml}</div></div><div class="lines">${lineChipsHTML(comps)}</div></div>`);
+			const arrow = !correct ? logic.directionArrowSymbol(s, solution) : '';
+			const arrowHtml = arrow ? ` <span class="dir-arrow" title="Direção aproximada">${arrow}</span>` : '';
+			parts.push(`<div class="guess"><div><div class="name">${i + 1}. ${s.name}${correct ? ' ✅' : ''}${distHtml}${arrowHtml}</div></div><div class="lines">${lineChipsHTML(comps)}</div></div>`);
 		} else {
 			parts.push(`<div class="guess placeholder"><div><div class="name">${i + 1}. —</div></div><div class="lines"></div></div>`);
 		}

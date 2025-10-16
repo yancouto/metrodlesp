@@ -78,3 +78,25 @@ export function buildShare(
 	const title = `Metrodle SP ${state.dateKey}`;
 	return [title, ...rows, `${attempts}/6`, 'yancouto.github.io/metrodlesp'].join('\n');
 }
+
+// Compute an 8-direction Unicode arrow from A->B based on geographic coordinates.
+// Returns '' if any coordinate is missing/invalid.
+export function directionArrowSymbol(
+	from: { lat?: number; lon?: number },
+	to: { lat?: number; lon?: number }
+): string {
+	if (typeof from.lat !== 'number' || typeof from.lon !== 'number' || typeof to.lat !== 'number' || typeof to.lon !== 'number') return '';
+	const lat1 = from.lat * Math.PI / 180;
+	const lon1 = from.lon * Math.PI / 180;
+	const lat2 = to.lat * Math.PI / 180;
+	const lon2 = to.lon * Math.PI / 180;
+	const dLon = lon2 - lon1;
+	const x = Math.cos(lat2) * Math.sin(dLon);
+	const y = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
+	let bearing = Math.atan2(x, y) * 180 / Math.PI; // -180..180, 0 = North
+	if (isNaN(bearing)) return '';
+	bearing = (bearing + 360) % 360; // 0..360
+	const dirs = ['↑', '↗', '→', '↘', '↓', '↙', '←', '↖'];
+	const idx = Math.round(bearing / 45) % 8;
+	return dirs[idx];
+}
