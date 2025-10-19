@@ -1,12 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {installFetchMock, installLocalStorageMock} from './testUtils.js';
+import {installFetchMock, installLocalStorageMock, installWindowLocationMock} from './testUtils.js';
 import {bfsDistances, loadAdjacencyGraph, loadStations} from '../stationLoader.js';
 import {buildShare} from '../logic.js';
 import {LINES} from '../lines.js';
 
 installFetchMock();
 installLocalStorageMock();
+installWindowLocationMock('https://yancouto.github.io/metrodlesp/');
 
 test('share text includes title, per-guess lines, attempts, and distances', async () => {
 	const stations = await loadStations();
@@ -28,5 +29,5 @@ test('share text includes title, per-guess lines, attempts, and distances', asyn
 	assert.match(lines[2], /⬛ a \d+ paradas/);
 	assert.match(lines[3], /🟩 🚆/);
 	assert.equal(lines[4], '3/6');
-	assert.equal(lines[5], 'yancouto.github.io/metrodlesp');
+	assert.equal(lines[5], 'https://yancouto.github.io/metrodlesp/');
 });

@@ -76,7 +76,8 @@ export function buildShare(
 	});
 	const attempts = state.status === 'won' ? state.guesses.length : 'X';
 	const title = `Metrodle SP ${state.dateKey}`;
-	return [title, ...rows, `${attempts}/6`, 'yancouto.github.io/metrodlesp'].join('\n');
+	const url = new URL('./', window.location.href).toString();
+	return [title, ...rows, `${attempts}/6`, url].join('\n');
 }
 
 // Compute an 8-direction Unicode arrow from A->B based on geographic coordinates.

@@ -162,6 +162,23 @@ const statStreak = document.getElementById('statStreak')!;
 const statBest = document.getElementById('statBest')!;
 const guessHistEl = document.getElementById('guessHist') as HTMLDivElement | null;
 
+// PWA install analytics
+try {
+	window.addEventListener('beforeinstallprompt', () => {
+		try { // @ts-ignore
+			gtag('event', 'install_prompt_shown');
+		} catch {
+		}
+	});
+	window.addEventListener('appinstalled', () => {
+		try { // @ts-ignore
+			gtag('event', 'install_accepted');
+		} catch {
+		}
+	});
+} catch {
+}
+
 function refreshDatalist() {
 	const q = guessInput.value;
 	const cands = q ? logic.searchCandidates(q, STATIONS, LINES) : STATIONS.slice().sort((a, b) => a.name.localeCompare(b.name));

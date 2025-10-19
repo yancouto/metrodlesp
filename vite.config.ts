@@ -6,7 +6,7 @@ import {defineConfig} from 'vite';
 // - Outputs production build to ./build to avoid clashing with tsc's ./dist used by tests
 export default defineConfig({
   root: '.',
-  base: '/metrodlesp/',
+	base: './',
   server: {
     port: 5173,
     open: false,

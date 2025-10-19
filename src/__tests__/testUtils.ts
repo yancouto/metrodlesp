@@ -36,3 +36,10 @@ export function installLocalStorageMock() {
 	};
 	return store;
 }
+
+// Provide a minimal window.location for tests that depend on it
+export function installWindowLocationMock(href: string = 'https://yancouto.github.io/metrodlesp/') {
+	const loc = {href};
+	(globalThis as any).window = Object.assign((globalThis as any).window || {}, {location: loc});
+	return loc;
+}
