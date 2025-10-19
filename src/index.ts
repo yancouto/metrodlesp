@@ -82,6 +82,11 @@ function suggestionLineChipsHTML(station: Station, knowledge: { eliminated: Set<
 
 async function shareResult(state: GameState) {
 	const text = logic.buildShare(state, STATIONS, LINES, DIST_FROM_SOLUTION);
+	// Analytics: share click
+	try { // @ts-ignore
+		gtag('event', 'share_click', {method: 'auto'});
+	} catch {
+	}
 	// Determine if device is touch-capable (mobile/tablet). On desktop, prefer clipboard.
 	let isTouch = false;
 	try {
@@ -92,6 +97,10 @@ async function shareResult(state: GameState) {
 	if (isTouch && navigator.share) {
 		try {
 			await navigator.share({text});
+			try { // @ts-ignore
+				gtag('event', 'share_success', {method: 'navigator-share'});
+			} catch {
+			}
 			return 'Compartilhado!';
 		} catch {
 			// fall through to clipboard
@@ -99,12 +108,24 @@ async function shareResult(state: GameState) {
 	}
 	try {
 		await navigator.clipboard.writeText(text);
+		try { // @ts-ignore
+			gtag('event', 'share_success', {method: 'clipboard'});
+		} catch {
+		}
 		return 'Copiado para a área de transferência!';
 	} catch {
 		try {
 			await navigator.share({text});
+			try { // @ts-ignore
+				gtag('event', 'share_success', {method: 'navigator-share-fallback'});
+			} catch {
+			}
 			return 'Compartilhado!';
 		} catch {
+			try { // @ts-ignore
+				gtag('event', 'share_fail');
+			} catch {
+			}
 			return "Falha ao compartilhar.";
 		}
 	}
