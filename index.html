@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="pt-BR">
 <head>
   <link rel="icon" type="image/png" href="/favicon.ico">
   <meta charset="utf-8" />
@@ -8,16 +8,28 @@
   <!-- Basic description for search engines and link previews -->
   <meta name="description" content="Metrodle SP: adivinhe a estação do metrô de São Paulo em até 6 tentativas."/>
   <!-- Open Graph for rich link previews -->
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Metrodle SP — Jogo diário do metrô de São Paulo</title>
+  <!-- Meta SEO básica -->
+  <meta name="description"
+        content="Adivinhe a estação do metrô de São Paulo em até 6 tentativas. Desafio diário com mapa, dicas e compartilhamento."/>
+  <link rel="canonical" href="https://yancouto.github.io/metrodlesp/"/>
+
+  <!-- Open Graph -->
   <meta property="og:type" content="website"/>
   <meta property="og:site_name" content="Metrodle SP"/>
-  <meta property="og:title" content="Metrodle SP — Jogo diário de estações"/>
-  <meta property="og:description" content="Adivinhe a estação do metrô de São Paulo em até 6 tentativas."/>
+  <meta property="og:title" content="Metrodle SP — Jogo diário do metrô de São Paulo"/>
+  <meta property="og:description"
+        content="Você consegue acertar a estação de hoje? Jogue o desafio diário com mapa e dicas."/>
   <meta property="og:url" content="https://yancouto.github.io/metrodlesp/"/>
+  <meta property="og:image" content="https://yancouto.github.io/metrodlesp/logo.png"/>
+
   <!-- Twitter Card -->
-  <meta name="twitter:card" content="summary"/>
-  <meta name="twitter:title" content="Metrodle SP — Jogo diário de estações"/>
-  <meta name="twitter:description" content="Adivinhe a estação do metrô/CPTM de São Paulo em até 6 tentativas."/>
-  <link rel="canonical" href="https://yancouto.github.io/metrodlesp/"/>
+  <meta name="twitter:card" content="summary_large_image"/>
+  <meta name="twitter:title" content="Metrodle SP — Jogo diário do metrô de São Paulo"/>
+  <meta name="twitter:description" content="Adivinhe a estação do metrô de São Paulo em até 6 tentativas."/>
+  <meta name="twitter:image" content="https://yancouto.github.io/metrodlesp/logo.png"/>
+
   <link rel="stylesheet" href="./styles.css" />
   <meta name="theme-color" content="#111" />
 </head>
@@ -74,7 +86,8 @@
     </section>
   </main>
 
-  <dialog id="endDialog">
+
+<dialog id="endDialog">
     <h2>Concluído</h2>
     <p id="endSummary"></p>
     <button id="endShareBtn">Compartilhar resultado</button>
@@ -83,17 +96,39 @@
   </dialog>
 
   <dialog id="helpDialog">
-    <h2>Como jogar</h2>
+    <h2>Como jogar Metrodle SP</h2>
+    <p>Metrodle SP é um <strong>jogo diário do metrô de São Paulo</strong>. Todo dia há uma estação diferente para
+      adivinhar.
+      Você tem até <strong>6 tentativas</strong>, e começa com o mapa ao redor da estação.</p>
     <ul>
-      <li>O objetivo é acertar a estação de metrô do mapa.</li>
-      <li>Há um novo desafio por dia. Você tem 6 tentativas.</li>
-      <li>Digite o nome da estação (ou da linha) para buscar e tentar.</li>
-      <li>Após um palpite errado, você verá se as cores das linhas da estação fazem parte da estação alvo, e a
-        distância.
+      <li>Digite o nome da <strong>estação</strong> ou da <strong>linha do metrô</strong> para buscar candidatos.</li>
+      <li>Após cada palpite, veja quais <strong>linhas</strong> batem, a <strong>distância</strong> até a resposta e a
+        <strong>direção</strong> aproximada.
       </li>
-      <li>Compartilhe seu resultado quando terminar.</li>
+      <li><strong>Compartilhe seu resultado</strong> ao final e desafie amigos!</li>
     </ul>
-    <button id="helpClose">Fechar</button>
+
+    <h3 id="linhas">Linhas do metrô cobertas</h3>
+    <p>Cobrimos as principais <strong>linhas do metrô de São Paulo</strong>. As cores e nomes seguem o padrão oficial
+      para facilitar o reconhecimento.</p>
+
+    <h3 id="faq">Perguntas frequentes (FAQ)</h3>
+    <details>
+      <summary>O jogo é gratuito?</summary>
+      <p>Sim. Basta abrir o site diariamente e jogar.</p>
+    </details>
+    <details>
+      <summary>Que horas o desafio muda?</summary>
+      <p>O desafio muda à meia-noite no horário de <strong>São Paulo (UTC-3)</strong>.</p>
+    </details>
+    <details>
+      <summary>Posso jogar no celular?</summary>
+      <p>Sim. O site é responsivo e funciona bem em dispositivos móveis.</p>
+    </details>
+
+    <div class="dialog-actions">
+      <button id="helpClose">Fechar</button>
+    </div>
   </dialog>
 
   <dialog id="statsDialog">
