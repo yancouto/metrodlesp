@@ -580,9 +580,91 @@ function initUI() {
 	}
 }
 
+// Attempt one-time migration of localStorage from the old GitHub Pages origin.
+async function migrateFromOldOriginIfNeeded(): Promise<void> {
+	try {
+		const already = localStorage.getItem('migratedFromGithubV1');
+		const hasState = localStorage.getItem('metrodlesp:state');
+		const hasStats = localStorage.getItem('metrodlesp:stats');
+		if (already || (hasState && hasStats)) return; // nothing to do
+		// Only run on secure contexts/browsers with DOM
+		if (typeof document === 'undefined' || typeof window === 'undefined') return;
+		const OLD_IFRAME_URL = 'https://yancouto.github.io/metrodlesp/storage-bridge.html';
+		await new Promise<void>((resolve) => {
+			let done = false;
+			const finish = (ok: boolean) => {
+				if (done) return;
+				done = true;
+				try {
+					if (ok) localStorage.setItem('migratedFromGithubV1', '1');
+				} catch {
+				}
+				resolve();
+			};
+			const iframe = document.createElement('iframe');
+			iframe.style.display = 'none';
+			iframe.src = OLD_IFRAME_URL;
+			document.body.appendChild(iframe);
+			const timeout = window.setTimeout(() => {
+				cleanup();
+				try { // @ts-ignore
+					gtag('event', 'migration_timeout');
+				} catch {
+				}
+				finish(false);
+			}, 2500);
+
+			function cleanup() {
+				window.removeEventListener('message', onMsg);
+				try {
+					document.body.removeChild(iframe);
+				} catch {
+				}
+				window.clearTimeout(timeout);
+			}
+
+			function onMsg(ev: MessageEvent) {
+				const data: any = ev.data;
+				if (!data || (data.type !== 'metrodlesp:migration:response' && data.type !== 'metrodlesp:migration:ready')) return;
+				if (data.type === 'metrodlesp:migration:ready') {
+					// Request payload
+					try {
+						iframe.contentWindow?.postMessage({type: 'metrodlesp:migration:request'}, '*');
+					} catch {
+					}
+					return;
+				}
+				cleanup();
+				try {
+					const keys = data.keys || {};
+					if (keys['metrodlesp:state'] && !hasState) localStorage.setItem('metrodlesp:state', keys['metrodlesp:state']);
+					if (keys['metrodlesp:stats'] && !hasStats) localStorage.setItem('metrodlesp:stats', keys['metrodlesp:stats']);
+					if (keys['seenHelpV1'] && !localStorage.getItem('seenHelpV1')) localStorage.setItem('seenHelpV1', keys['seenHelpV1']);
+					try { // @ts-ignore
+						gtag('event', 'migration_success');
+					} catch {
+					}
+				} catch {
+					try { // @ts-ignore
+						gtag('event', 'migration_fail');
+					} catch {
+					}
+				}
+				finish(true);
+			}
+
+			window.addEventListener('message', onMsg);
+		});
+	} catch {
+		// ignore
+	}
+}
+
 // Boot: load stations from CSV (required) then init UI
 async function boot() {
 	scheduleMidnightReset();
+	// Try to pull existing data from the old origin before loading state
+	await migrateFromOldOriginIfNeeded();
 	STATIONS = await loadStations();
 	gameState = state.loadState(todayKey, STATIONS);
 	stats = state.loadStats();

@@ -1,0 +1,58 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>Metrodle Storage Bridge</title>
+    <style>html, body {
+        margin: 0;
+        padding: 0;
+        background: #fff;
+        color: #000
+    }</style>
+</head>
+<body>
+<script>
+    (function () {
+        // This file is served under both hosts. For migration it must be loaded from
+        // https://yancouto.github.io/metrodlesp/storage-bridge.html so it can read
+        // the old origin's localStorage, then postMessage it to the parent window.
+        function safeGet(key) {
+            try {
+                return window.localStorage.getItem(key);
+            } catch {
+                return null;
+            }
+        }
+
+        function handleMessage(ev) {
+            try {
+                var data = ev.data || {};
+                if (!data || data.type !== 'metrodlesp:migration:request') return;
+                // Only respond to the parent that initiated the request
+                var payload = {
+                    type: 'metrodlesp:migration:response',
+                    keys: {
+                        'metrodlesp:state': safeGet('metrodlesp:state'),
+                        'metrodlesp:stats': safeGet('metrodlesp:stats'),
+                        'seenHelpV1': safeGet('seenHelpV1')
+                    }
+                };
+                // Reply to the source; use * so it works across domains. The parent
+                // should validate the origin.
+                ev.source && ev.source.postMessage(payload, '*');
+            } catch (e) {
+                // Best effort; do nothing on error
+            }
+        }
+
+        window.addEventListener('message', handleMessage);
+        // Also proactively announce readiness so the parent can know it's loaded
+        try {
+            parent && parent.postMessage({type: 'metrodlesp:migration:ready'}, '*');
+        } catch {
+        }
+    })();
+</script>
+</body>
+</html>
