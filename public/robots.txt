@@ -1,3 +1,3 @@
 User-agent: *
 Allow: /
-Sitemap: https://yancouto.github.io/metrodlesp/sitemap.xml
+Sitemap: https://metrodle.com.br/sitemap.xml
