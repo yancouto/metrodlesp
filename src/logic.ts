@@ -77,7 +77,9 @@ export function buildShare(
 	const attempts = state.status === 'won' ? state.guesses.length : 'X';
 	const title = `Metrodle SP ${state.dateKey}`;
 	const url = new URL('./', window.location.href).toString();
-	return [title, ...rows, `${attempts}/6`, url].join('\n');
+	// Remove protocol for a cleaner share URL (e.g., metrodle.com.br or yancouto.github.io/metrodlesp/)
+	const prettyUrl = url.replace(/^https?:\/\//, '');
+	return [title, ...rows, `${attempts}/6`, prettyUrl].join('\n');
 }
 
 // Compute an 8-direction Unicode arrow from A->B based on geographic coordinates.

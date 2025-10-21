@@ -589,7 +589,8 @@ async function migrateFromOldOriginIfNeeded(): Promise<void> {
 		if (already || (hasState && hasStats)) return; // nothing to do
 		// Only run on secure contexts/browsers with DOM
 		if (typeof document === 'undefined' || typeof window === 'undefined') return;
-		const OLD_IFRAME_URL = 'https://yancouto.github.io/metrodlesp/storage-bridge.html';
+		const OLD_ORIGIN = 'https://yancouto.github.io';
+		const OLD_IFRAME_URL = 'https://yancouto.github.io/storage-bridge.html';
 		await new Promise<void>((resolve) => {
 			let done = false;
 			const finish = (ok: boolean) => {
@@ -625,24 +626,42 @@ async function migrateFromOldOriginIfNeeded(): Promise<void> {
 
 			function onMsg(ev: MessageEvent) {
 				const data: any = ev.data;
+				// Only accept messages from the old origin to avoid redirect-induced false positives
+				if (ev.origin !== OLD_ORIGIN) return;
 				if (!data || (data.type !== 'metrodlesp:migration:response' && data.type !== 'metrodlesp:migration:ready')) return;
 				if (data.type === 'metrodlesp:migration:ready') {
-					// Request payload
+					// Request payload; target the old origin explicitly
 					try {
-						iframe.contentWindow?.postMessage({type: 'metrodlesp:migration:request'}, '*');
+						iframe.contentWindow?.postMessage({type: 'metrodlesp:migration:request'}, OLD_ORIGIN);
 					} catch {
 					}
 					return;
 				}
 				cleanup();
+				let imported = false;
 				try {
 					const keys = data.keys || {};
-					if (keys['metrodlesp:state'] && !hasState) localStorage.setItem('metrodlesp:state', keys['metrodlesp:state']);
-					if (keys['metrodlesp:stats'] && !hasStats) localStorage.setItem('metrodlesp:stats', keys['metrodlesp:stats']);
-					if (keys['seenHelpV1'] && !localStorage.getItem('seenHelpV1')) localStorage.setItem('seenHelpV1', keys['seenHelpV1']);
-					try { // @ts-ignore
-						gtag('event', 'migration_success');
-					} catch {
+					if (keys['metrodlesp:state'] && !hasState) {
+						localStorage.setItem('metrodlesp:state', keys['metrodlesp:state']);
+						imported = true;
+					}
+					if (keys['metrodlesp:stats'] && !hasStats) {
+						localStorage.setItem('metrodlesp:stats', keys['metrodlesp:stats']);
+						imported = true;
+					}
+					if (keys['seenHelpV1'] && !localStorage.getItem('seenHelpV1')) {
+						localStorage.setItem('seenHelpV1', keys['seenHelpV1']);
+					}
+					if (imported) {
+						try { // @ts-ignore
+							gtag('event', 'migration_success');
+						} catch {
+						}
+					} else {
+						try { // @ts-ignore
+							gtag('event', 'migration_noop');
+						} catch {
+						}
 					}
 				} catch {
 					try { // @ts-ignore
@@ -650,7 +669,7 @@ async function migrateFromOldOriginIfNeeded(): Promise<void> {
 					} catch {
 					}
 				}
-				finish(true);
+				finish(imported);
 			}
 
 			window.addEventListener('message', onMsg);
