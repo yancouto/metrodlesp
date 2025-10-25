@@ -78,7 +78,7 @@ export function buildShare(
 	const title = `Metrodle SP ${state.dateKey}`;
 	const url = new URL('./', window.location.href).toString();
 	// Remove protocol for a cleaner share URL (e.g., metrodle.com.br or yancouto.github.io/metrodlesp/)
-	const prettyUrl = url.replace(/^https?:\/\//, '');
+	const prettyUrl = `#metrodlesp ${url.replace(/^https?:\/\//, '')}`;
 	return [title, ...rows, `${attempts}/6`, prettyUrl].join('\n');
 }
 
