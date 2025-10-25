@@ -15,15 +15,18 @@ SELECT ?station ?connecting_line ?connecting_lineLabel ?coordinate_location ?sta
 ORDER BY (?stationLabel)
 
 # São Paulo Metro station adjacencies
-SELECT ?station ?adjacent_station WHERE {
+SELECT DISTINCT ?station ?adjacent_station WHERE {
   ?station wdt:P31 wd:Q928830.
   SERVICE wikibase:label { bd:serviceParam wikibase:language "pt,en". }
   ?station wdt:P16 wd:Q483343;
     wdt:P5817 wd:Q55654238;
     wdt:P197 ?adjacent_station.
+  ?adjacent_station wdt:P81 ?connecting_line.
+  # Only get lines from metro
+  ?connecting_line wdt:P16 wd:Q483343.
   ?adjacent_station wdt:P5817 wd:Q55654238.
 }
-ORDER BY (?station)
+ORDER BY ?station ?adjacent_station
 
 # São Paulo Metro station interchanges
 SELECT ?station ?interchange_station WHERE {
