@@ -95,7 +95,7 @@ function isTouchDevice(): boolean {
 }
 
 async function shareResult(state: GameState): Promise<string | null> {
-	const text = logic.buildShare(state, STATIONS, LINES, DIST_FROM_SOLUTION, hardMode);
+    const text = logic.buildShare(state, STATIONS, LINES, DIST_FROM_SOLUTION, hardMode, includeCPTM);
 	// Analytics: share click
 	gtag("event", "share_click", { method: "auto" });
 	// Determine if device is touch-capable (mobile/tablet). On desktop, prefer clipboard.
@@ -158,8 +158,8 @@ async function shareImgResult(state: GameState): Promise<string | null> {
 }
 
 async function shareResultAsImage(state: GameState) {
-	const container = document.getElementById("share-image-container")!;
-	container.innerHTML = logic.buildShareImageHTML(state, STATIONS, LINES, DIST_FROM_SOLUTION, hardMode);
+    const container = document.getElementById("share-image-container")!;
+    container.innerHTML = logic.buildShareImageHTML(state, STATIONS, LINES, DIST_FROM_SOLUTION, hardMode, includeCPTM);
 	// Add a class to enable export styles
 	const shareImageEl = container.firstElementChild as HTMLElement;
 	shareImageEl.classList.add("share-image");
@@ -182,6 +182,8 @@ let gameState: GameState;
 let stats: Stats;
 let hardMode: boolean;
 let dailyRotation: number;
+let includeCPTM: boolean;
+let openedForCptmPrompt = false;
 
 const guessInput = document.getElementById("guessInput") as HTMLInputElement;
 const form = document.getElementById("guessForm") as HTMLFormElement;
@@ -202,13 +204,16 @@ const nextTimerEl = document.getElementById("nextTimer") as HTMLDivElement | nul
 const helpDialog = document.getElementById("helpDialog") as HTMLDialogElement;
 const helpBtn = document.getElementById("helpBtn") as HTMLButtonElement;
 const helpClose = document.getElementById("helpClose") as HTMLButtonElement;
+const openSettingsFromHelp = document.getElementById("openSettingsFromHelp") as HTMLAnchorElement | null;
 const statsDialog = document.getElementById("statsDialog") as HTMLDialogElement;
-const hardModeDialog = document.getElementById("hardModeDialog") as HTMLDialogElement;
-const hardModeBtn = document.getElementById("hardModeBtn") as HTMLButtonElement;
-const hardModeClose = document.getElementById("hardModeClose") as HTMLButtonElement;
+const statsTitleEl = statsDialog.querySelector("h2") as HTMLHeadingElement | null;
+const settingsDialog = document.getElementById("settingsDialog") as HTMLDialogElement;
+const settingsBtn = document.getElementById("settingsBtn") as HTMLButtonElement;
+const settingsClose = document.getElementById("settingsClose") as HTMLButtonElement;
 const hardModeToggle = document.getElementById("hardModeToggle") as HTMLInputElement;
 const hardModeSuggestion = document.getElementById("hardModeSuggestion") as HTMLDivElement;
 const tryHardModeLink = document.getElementById("tryHardModeLink") as HTMLAnchorElement;
+const cptmToggle = document.getElementById("cptmToggle") as HTMLInputElement;
 const statsBtn = document.getElementById("statsBtn") as HTMLButtonElement;
 const statsClose = document.getElementById("statsClose") as HTMLButtonElement;
 const statPlayed = document.getElementById("statPlayed")!;
@@ -266,15 +271,35 @@ function renderGuesses() {
 
 function renderStats() {
 	// Update countdown UI if game ended
-	if (nextTimerEl) {
-		if (gameState.status === "playing") {
-			nextTimerEl.textContent = "";
-		} else {
-			const ms = msUntilNextSPMidnight();
-			nextTimerEl.textContent = `Próximo jogo em ${formatHHMMSS(ms)}`;
-		}
-	}
-	statPlayed.textContent = String(stats.played);
+ if (nextTimerEl) {
+        if (gameState.status === "playing") {
+            nextTimerEl.textContent = "";
+        } else {
+            const ms = msUntilNextSPMidnight();
+            nextTimerEl.textContent = `Próximo jogo em ${formatHHMMSS(ms)}`;
+        }
+    }
+    // Update stats dialog title to reflect mode
+    if (statsTitleEl) {
+        statsTitleEl.textContent = includeCPTM ? "Estatísticas (CPTM) 📊" : "Estatísticas 📊";
+        // Ensure a small mode note exists under the title (only when CPTM)
+        const noteId = "statsModeNote";
+        let noteEl = document.getElementById(noteId) as HTMLParagraphElement | null;
+        if (includeCPTM) {
+            if (!noteEl) {
+                noteEl = document.createElement("p");
+                noteEl.id = noteId;
+                noteEl.style.textAlign = "center";
+                noteEl.style.margin = "4px 0 8px";
+                noteEl.style.opacity = "0.85";
+                statsTitleEl.insertAdjacentElement("afterend", noteEl);
+            }
+            noteEl.textContent = "Estas são as estatísticas do modo atual (CPTM).";
+        } else if (noteEl) {
+            noteEl.remove();
+        }
+    }
+    statPlayed.textContent = String(stats.played);
 	statWin.textContent = String(stats.wins);
 	statStreak.textContent = String(stats.streak);
 	statBest.textContent = String(stats.best);
@@ -306,7 +331,7 @@ function renderStats() {
 	if (statsShareBtn) {
 		statsShareBtn.disabled = gameState.status === "playing";
 	}
-	if (statsShareImgBtn) {
+ if (statsShareImgBtn) {
 		statsShareImgBtn.disabled = gameState.status === "playing";
 	}
 	// Show "Try Hard Mode" suggestion if applicable
@@ -447,24 +472,24 @@ function scheduleMidnightReset() {
 }
 
 function endGame(won: boolean) {
-	gameState.status = won ? "won" : "lost";
-	gtag("event", "finished", { value: gameState.status });
-	state.saveState(gameState);
-	// update stats once per day
-	if (stats.lastDate !== gameState.dateKey) {
-		stats.played += 1;
-		stats.lastDate = gameState.dateKey;
-		if (won) {
-			stats.wins += 1;
-			stats.streak += 1;
-			stats.best = Math.max(stats.best, stats.streak);
-			const attempts = gameState.guesses.length;
-			if (attempts >= 1 && attempts <= 6) stats.dist[attempts - 1] += 1;
-		} else {
-			stats.streak = 0;
-		}
-		state.saveStats(stats);
-	}
+    gameState.status = won ? "won" : "lost";
+    gtag("event", "finished", { value: gameState.status });
+    state.saveState(gameState, includeCPTM);
+    // update stats once per day
+    if (stats.lastDate !== gameState.dateKey) {
+        stats.played += 1;
+        stats.lastDate = gameState.dateKey;
+        if (won) {
+            stats.wins += 1;
+            stats.streak += 1;
+            stats.best = Math.max(stats.best, stats.streak);
+            const attempts = gameState.guesses.length;
+            if (attempts >= 1 && attempts <= 6) stats.dist[attempts - 1] += 1;
+        } else {
+            stats.streak = 0;
+        }
+        state.saveStats(stats, includeCPTM);
+    }
 	// Disable interactive input and refresh UI
 	if (won && hardMode) {
 		renderMap(); // Re-render map immediately on win to remove rotation/hidden lines
@@ -508,10 +533,10 @@ function onSubmitGuess(name: string) {
 		setHint("O jogo de hoje terminou.");
 		return;
 	}
-	gtag("event", "guess");
-	gameState.guesses.push(match.id);
-	state.saveState(gameState);
-	renderGuesses();
+ gtag("event", "guess");
+ gameState.guesses.push(match.id);
+ state.saveState(gameState, includeCPTM);
+ renderGuesses();
 	// Only re-render the map if the guess might change its appearance (hard mode progression)
 	if (hardMode && gameState.guesses.length <= 2) {
 		renderMap();
@@ -660,18 +685,36 @@ function initUI() {
 		if (keyboard) keyboard.update();
 	});
 
-	helpBtn.addEventListener("click", () => helpDialog.showModal());
-	helpClose.addEventListener("click", () => {
-		helpDialog.close();
-		try {
-			localStorage.setItem("seenHelpV1", "1");
-		} catch {}
-	});
-	statsBtn.addEventListener("click", () => {
-		renderStats();
-		statsDialog.showModal();
-	});
-	statsClose.addEventListener("click", () => statsDialog.close());
+ helpBtn.addEventListener("click", () => helpDialog.showModal());
+  helpClose.addEventListener("click", () => {
+    helpDialog.close();
+    try {
+      localStorage.setItem("seenHelpV1", "1");
+    } catch {}
+  });
+  statsBtn.addEventListener("click", () => {
+    renderStats();
+    statsDialog.showModal();
+  });
+  statsClose.addEventListener("click", () => statsDialog.close());
+
+  // Settings dialog interactions
+  openedForCptmPrompt = false;
+  settingsBtn.addEventListener("click", () => {
+    // sync toggles before opening
+    hardModeToggle.checked = hardMode;
+    cptmToggle.checked = includeCPTM;
+    openedForCptmPrompt = false;
+    settingsDialog.showModal();
+  });
+  settingsClose.addEventListener("click", () => {
+    // If we showed Settings as a CPTM prompt, consider it seen on close
+    if (openedForCptmPrompt) {
+      try { state.saveCptmPromptSeen(); } catch {}
+      openedForCptmPrompt = false;
+    }
+    settingsDialog.close();
+  });
 
 	if (backspaceBtn) {
 		backspaceBtn.addEventListener("click", () => {
@@ -704,47 +747,85 @@ function initUI() {
 				statsShareImgBtn.disabled = false;
 			}
 		});
-	}
+ }
 
-	hardModeBtn.addEventListener("click", () => hardModeDialog.showModal());
-	hardModeClose.addEventListener("click", () => hardModeDialog.close());
-	tryHardModeLink.addEventListener("click", e => {
-		e.preventDefault();
-		statsDialog.close();
-		hardModeDialog.showModal();
-	});
-	hardModeToggle.addEventListener("change", () => {
-		hardMode = hardModeToggle.checked;
-		state.saveHardMode(hardMode);
-		renderMap();
-	});
+    tryHardModeLink.addEventListener("click", e => {
+        e.preventDefault();
+        statsDialog.close();
+        // Open settings to let the user enable hard mode
+        hardModeToggle.checked = hardMode;
+        cptmToggle.checked = includeCPTM;
+        settingsDialog.showModal();
+    });
+    hardModeToggle.addEventListener("change", () => {
+        hardMode = hardModeToggle.checked;
+        state.saveHardMode(hardMode);
+        renderMap();
+    });
 
-	// Initial map render
-	renderMap();
+    cptmToggle.addEventListener("change", () => {
+        includeCPTM = cptmToggle.checked;
+        state.saveIncludeCPTM(includeCPTM);
+        state.saveCptmPromptSeen();
+        // Reload to reinitialize stations/data and daily solution with the new setting
+        location.reload();
+    });
+
+    // Initial map render
+    renderMap();
 }
 
 // Boot: load stations from CSV (required) then init UI
 async function boot() {
-	scheduleMidnightReset();
-	STATIONS = await loadStations();
-	gameState = state.loadState(todayKey, STATIONS);
-	stats = state.loadStats();
-	// For testing purposes
-	(window as any).STATIONS = STATIONS;
-	(window as any).gameState = gameState;
-	hardMode = state.loadHardMode();
-	hardModeToggle.checked = hardMode;
-	dailyRotation = logic.getDailyRotation(todayKey);
-	const solution = stationById(gameState.solutionId);
-	let ADJ_GRAPH = await loadAdjacencyGraph();
-	DIST_FROM_SOLUTION = bfsDistances(solution, ADJ_GRAPH);
-	initUI();
-	// Auto-open help on first run
-	try {
-		if (!localStorage.getItem("seenHelpV1")) {
-			helpDialog.showModal();
-		}
-	} catch {}
+    scheduleMidnightReset();
+    includeCPTM = state.loadIncludeCPTM();
+    STATIONS = await loadStations({ includeCPTM });
+    gameState = state.loadState(todayKey, STATIONS, includeCPTM);
+    stats = state.loadStats(includeCPTM);
+    // For testing purposes
+    (window as any).STATIONS = STATIONS;
+    (window as any).gameState = gameState;
+    hardMode = state.loadHardMode();
+    hardModeToggle.checked = hardMode;
+    cptmToggle.checked = includeCPTM;
+    dailyRotation = logic.getDailyRotation(todayKey);
+    const solution = stationById(gameState.solutionId);
+    let ADJ_GRAPH = await loadAdjacencyGraph();
+    DIST_FROM_SOLUTION = bfsDistances(solution, ADJ_GRAPH);
+    initUI();
+    // Wire help link to open settings
+    if (openSettingsFromHelp) {
+        openSettingsFromHelp.addEventListener("click", e => {
+            e.preventDefault();
+            helpDialog.close();
+            hardModeToggle.checked = hardMode;
+            cptmToggle.checked = includeCPTM;
+            openedForCptmPrompt = false;
+            settingsDialog.showModal();
+        });
+    }
+
+    // Auto-open help on first run; also mark CPTM prompt as seen so we don't double prompt
+    let firstRun = false;
+    try {
+        if (!localStorage.getItem("seenHelpV1")) {
+            firstRun = true;
+            helpDialog.showModal();
+            // Consider CPTM prompt as already surfaced for first-time users
+            state.saveCptmPromptSeen();
+        }
+    } catch {}
+
+    // Show CPTM opt-in prompt once (but not on very first run)
+    try {
+        const shouldPromptCPTM = !firstRun && !state.loadCptmPromptSeen() && !includeCPTM;
+        if (shouldPromptCPTM) {
+            hardModeToggle.checked = hardMode;
+            cptmToggle.checked = includeCPTM;
+            openedForCptmPrompt = true;
+            settingsDialog.showModal();
+        }
+    } catch {}
 }
 
 // Start app

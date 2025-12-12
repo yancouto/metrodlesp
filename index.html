@@ -59,11 +59,11 @@
 		</script>
 		<header class="topbar">
 			<h1>Metrodle SP <span class="tagline">Que estação é essa?</span></h1>
-			<div class="actions">
-				<button id="statsBtn" aria-label="Stats">📊</button>
-				<button id="hardModeBtn" aria-label="Hard mode">😈</button>
-				<button id="helpBtn" aria-label="Help">❔</button>
-			</div>
+   <div class="actions">
+                <button id="settingsBtn" aria-label="Configurações">⚙️</button>
+                <button id="statsBtn" aria-label="Estatísticas">📊</button>
+                <button id="helpBtn" aria-label="Ajuda">❔</button>
+            </div>
 		</header>
 
 		<main class="container">
@@ -116,7 +116,7 @@
 		</dialog>
 
 		<dialog id="helpDialog">
-			<h2>Como jogar Metrodle SP</h2>
+			<h2>Como jogar Metrodle SP ❔</h2>
 			<p>
 				Metrodle SP é um <strong>jogo diário do metrô de São Paulo</strong>. Todo dia há uma estação diferente para
 				adivinhar. Você tem até <strong>6 tentativas</strong>, e começa com o mapa ao redor da estação.
@@ -153,30 +153,53 @@
 				<p>Sim. O site é responsivo e funciona bem em dispositivos móveis.</p>
 			</details>
 
-			<div class="dialog-actions">
-				<button id="helpClose">Fechar</button>
-			</div>
-		</dialog>
+            <h3 style="margin-top: 16px">Opções avançadas</h3>
+            <p>
+                Você pode ativar o <strong>modo difícil</strong> e incluir as <strong>estações da CPTM</strong> nas
+                <a href="#" id="openSettingsFromHelp" class="accent-link">Configurações</a>.
+            </p>
+            <div class="dialog-actions">
+                <button id="helpClose" class="dialog-button">Fechar</button>
+            </div>
+        </dialog>
 
-		<dialog id="hardModeDialog">
-			<h2>Modo Difícil</h2>
-			<p>No modo difícil, o mapa começa <strong>rotacionado</strong> e <strong>sem as linhas</strong> do metrô.</p>
-			<ul>
-				<li>Após o primeiro erro, as <strong>linhas aparecem</strong>.</li>
-				<li>Após o segundo erro, o <strong>mapa volta ao normal</strong>.</li>
-			</ul>
-			<label class="toggle-switch">
-				<input type="checkbox" id="hardModeToggle" />
-				<span class="slider"></span>
-				Ativar modo difícil
-			</label>
-			<div class="dialog-actions">
-				<button id="hardModeClose">Fechar</button>
-			</div>
-		</dialog>
+        <dialog id="settingsDialog">
+            <h2>Configurações ⚙️</h2>
+            <section style="display: grid; gap: 10px">
+                <div>
+                    <p style="margin: 0 0 6px 0"><strong>⚔️ Modo Difícil</strong></p>
+                    <p style="margin: 0 0 8px 0; opacity: 0.85; font-size: 0.95em">
+                        O mapa começa rotacionado e sem as linhas do metrô. Após erros, os elementos retornam.
+                    </p>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="hardModeToggle" />
+                        <span class="slider"></span>
+                        Ativar modo difícil
+                    </label>
+                </div>
+				<br>
+                <div>
+                    <p style="margin: 12px 0 6px 0"><strong>🚆 Estações da CPTM</strong></p>
+                    <p style="margin: 0 0 8px 0; opacity: 0.85; font-size: 0.95em">
+                        Inclui as estações da CPTM (trens) nas sugestões e na seleção diária.
+                    </p>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="cptmToggle" />
+                        <span class="slider"></span>
+                        Incluir estações da CPTM
+                    </label>
+                    <p style="font-size: 0.9em; opacity: 0.8; margin-top: 6px">
+                        Alterar estas opções reinicia o jogo.
+                    </p>
+                </div>
+            </section>
+            <div class="dialog-actions">
+                <button id="settingsClose" class="dialog-button">Fechar</button>
+            </div>
+        </dialog>
 
 		<dialog id="statsDialog">
-			<h2>Estatísticas</h2>
+			<h2>Estatísticas 📊</h2>
 			<div class="stats-grid">
 				<div>
 					<div id="statPlayed" class="stat">0</div>
@@ -209,7 +232,7 @@
 					<a href="#" id="tryHardModeLink">Tente o modo difícil!</a>
 				</p>
 			</div>
-			<button id="statsClose">Fechar</button>
+   <button id="statsClose" class="dialog-button">Fechar</button>
 		</dialog>
 
 		<script type="module" src="src/index.ts"></script>

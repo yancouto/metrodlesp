@@ -1,5 +1,7 @@
 /* Query used in WikiData (as reference):
 
+We query them from: https://query.wikidata.org/
+
 # São Paulo Metro stations
 SELECT ?station ?connecting_line ?connecting_lineLabel ?coordinate_location ?station_code ?stationLabel WHERE {
   ?station wdt:P31 wd:Q928830.
@@ -116,12 +118,16 @@ function extractQId(url: string): string {
 	return m[0].toUpperCase();
 }
 
-export async function loadStations(): Promise<Station[]> {
-	if (stationsCache) return stationsCache;
-	const url = new URL("./stations.csv", import.meta.url);
-	const res = await fetch(url as any, { cache: "no-cache" });
-	if (!res.ok) throw new Error("Falha ao carregar stations.csv");
-	const text = await res.text();
+export type LoadStationsOptions = {
+    includeCPTM?: boolean;
+};
+
+export async function loadStations(_opts: LoadStationsOptions = {}): Promise<Station[]> {
+    if (stationsCache) return stationsCache;
+    const url = new URL("./stations.csv", import.meta.url);
+    const res = await fetch(url as any, { cache: "no-cache" });
+    if (!res.ok) throw new Error("Falha ao carregar stations.csv");
+    const text = await res.text();
 	const rows = await parseCSVObjects(text);
 
 	const map = new Map<string, Station>();
@@ -158,8 +164,9 @@ export async function loadStations(): Promise<Station[]> {
 			}
 		}
 	}
-	stationsCache = Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
-	return stationsCache;
+    stationsCache = Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
+    // Note: When includeCPTM is enabled, future implementation will merge CPTM data here.
+    return stationsCache;
 }
 
 // Based on wikidata ids

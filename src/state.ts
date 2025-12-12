@@ -18,8 +18,12 @@ export type Stats = {
 };
 
 const STORAGE_KEY = "metrodlesp:state";
+const STORAGE_KEY_CPTM = "metrodlesp:state:cptm";
 const STATS_KEY = "metrodlesp:stats";
+const STATS_KEY_CPTM = "metrodlesp:stats:cptm";
 const HARD_MODE_KEY = "metrodlesp:hardMode";
+const INCLUDE_CPTM_KEY = "metrodlesp:includeCPTM";
+const CPTM_PROMPT_SEEN_KEY = "metrodlesp:cptmPromptSeenV1";
 const DEBUG_STATIONS_LOG = false;
 
 export function loadHardMode(): boolean {
@@ -28,10 +32,40 @@ export function loadHardMode(): boolean {
 }
 
 export function saveHardMode(isEnabled: boolean) {
-	localStorage.setItem(HARD_MODE_KEY, String(isEnabled));
+    localStorage.setItem(HARD_MODE_KEY, String(isEnabled));
 }
 
-export function loadState(dateKey: string, stations: Station[]): GameState {
+// CPTM mode (include CPTM train stations)
+export function loadIncludeCPTM(): boolean {
+    try {
+        const raw = localStorage.getItem(INCLUDE_CPTM_KEY);
+        return raw === "true";
+    } catch {
+        return false;
+    }
+}
+
+export function saveIncludeCPTM(isEnabled: boolean) {
+    try {
+        localStorage.setItem(INCLUDE_CPTM_KEY, String(isEnabled));
+    } catch {}
+}
+
+export function loadCptmPromptSeen(): boolean {
+    try {
+        return localStorage.getItem(CPTM_PROMPT_SEEN_KEY) === "1";
+    } catch {
+        return false;
+    }
+}
+
+export function saveCptmPromptSeen() {
+    try {
+        localStorage.setItem(CPTM_PROMPT_SEEN_KEY, "1");
+    } catch {}
+}
+
+export function loadState(dateKey: string, stations: Station[], includeCPTM: boolean = false): GameState {
 	if (DEBUG_STATIONS_LOG) {
 		if (stations && stations.length) {
 			const today = new Date(dateKey);
@@ -50,7 +84,8 @@ export function loadState(dateKey: string, stations: Station[]): GameState {
 	}
 	const solution = pickDailyStation(dateKey, stations);
 	console.log(solution);
-	const raw = localStorage.getItem(STORAGE_KEY);
+	const key = includeCPTM ? STORAGE_KEY_CPTM : STORAGE_KEY;
+	const raw = localStorage.getItem(key);
 	if (raw) {
 		try {
 			const state = JSON.parse(raw) as GameState;
@@ -65,16 +100,18 @@ export function loadState(dateKey: string, stations: Station[]): GameState {
 		guesses: [],
 		status: "playing",
 	};
-	saveState(init);
+	saveState(init, includeCPTM);
 	return init;
 }
 
-export function saveState(s: GameState) {
-	localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
+export function saveState(s: GameState, includeCPTM: boolean = false) {
+	const key = includeCPTM ? STORAGE_KEY_CPTM : STORAGE_KEY;
+	localStorage.setItem(key, JSON.stringify(s));
 }
 
-export function loadStats(): Stats {
-	const raw = localStorage.getItem(STATS_KEY);
+export function loadStats(includeCPTM: boolean = false): Stats {
+	const key = includeCPTM ? STATS_KEY_CPTM : STATS_KEY;
+	const raw = localStorage.getItem(key);
 	if (!raw) return { played: 0, wins: 0, streak: 0, best: 0, dist: [0, 0, 0, 0, 0, 0] };
 	try {
 		return JSON.parse(raw) as Stats;
@@ -83,6 +120,7 @@ export function loadStats(): Stats {
 	}
 }
 
-export function saveStats(st: Stats) {
-	localStorage.setItem(STATS_KEY, JSON.stringify(st));
+export function saveStats(st: Stats, includeCPTM: boolean = false) {
+	const key = includeCPTM ? STATS_KEY_CPTM : STATS_KEY;
+	localStorage.setItem(key, JSON.stringify(st));
 }

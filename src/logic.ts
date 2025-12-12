@@ -108,11 +108,12 @@ export function getKnownLineKnowledge(
 }
 
 export function buildShare(
-	state: GameState,
-	stations: Station[],
-	LINES: Record<string, Line>,
-	DIST_FROM_SOLUTION: Map<string, number>,
-	hardMode: boolean,
+    state: GameState,
+    stations: Station[],
+    LINES: Record<string, Line>,
+    DIST_FROM_SOLUTION: Map<string, number>,
+    hardMode: boolean,
+    includeCPTM: boolean = false,
 ): string {
 	const solution = stations.find(s => s.id === state.solutionId)!;
 	const rows = state.guesses.map(id => {
@@ -122,8 +123,13 @@ export function buildShare(
 		const distTxt = DIST_FROM_SOLUTION.get(guess.wikidataId)!;
 		return `${matchSquares} a ${distTxt} paradas`;
 	});
-	const attempts = state.status === "won" ? state.guesses.length : "X";
-	const title = `Metrodle SP ${state.dateKey}${hardMode ? " (difícil)" : ""}`;
+ const attempts = state.status === "won" ? state.guesses.length : "X";
+ // Title suffix per mode: (CPTM), (⚔️), (CPTM+⚔️)
+ let suffix = "";
+ if (includeCPTM && hardMode) suffix = " (CPTM+⚔️)";
+ else if (includeCPTM) suffix = " (CPTM)";
+ else if (hardMode) suffix = " (⚔️)";
+ const title = `Metrodle SP ${state.dateKey}${suffix}`;
 	const url = new URL("./", window.location.href).toString();
 	// Remove protocol for a cleaner share URL (e.g., metrodle.com.br or yancouto.github.io/metrodlesp/)
 	const prettyUrl = `#metrodlesp ${url.replace(/^https?:\/\//, "")}`;
@@ -131,11 +137,12 @@ export function buildShare(
 }
 
 export function buildShareImageHTML(
-	state: GameState,
-	stations: Station[],
-	LINES: Record<string, Line>,
-	DIST_FROM_SOLUTION: Map<string, number>,
-	hardMode: boolean,
+    state: GameState,
+    stations: Station[],
+    LINES: Record<string, Line>,
+    DIST_FROM_SOLUTION: Map<string, number>,
+    hardMode: boolean,
+    includeCPTM: boolean = false,
 ): string {
 	const solution = stations.find(s => s.id === state.solutionId)!;
 	const rows = state.guesses.map(id => {
@@ -145,8 +152,12 @@ export function buildShareImageHTML(
 		const distTxt = DIST_FROM_SOLUTION.get(guess.wikidataId)!;
 		return `<div>${matchSquares} a ${distTxt} paradas</div>`;
 	});
-	const attempts = state.status === "won" ? state.guesses.length : "X";
-	const title = `<h2>Metrodle SP ${state.dateKey}${hardMode ? " (difícil)" : ""}</h2>`;
+ const attempts = state.status === "won" ? state.guesses.length : "X";
+ let suffix = "";
+ if (includeCPTM && hardMode) suffix = " (CPTM+⚔️)";
+ else if (includeCPTM) suffix = " (CPTM)";
+ else if (hardMode) suffix = " (⚔️)";
+ const title = `<h2>Metrodle SP ${state.dateKey}${suffix}</h2>`;
 	const url = new URL("./", window.location.href).toString().replace(/^https?:\/\//, "");
 	const prettyUrl = `<div class="url">${url}</div>`;
 	return `<div class="share-image">

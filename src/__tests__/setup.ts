@@ -25,7 +25,7 @@ vi.mock("../stationLoader", async () => {
 	const original = await vi.importActual("../stationLoader");
 	return {
 		...original,
-		loadStations: () => Promise.resolve(STATIONS),
+		loadStations: (_opts?: any) => Promise.resolve(STATIONS),
 		loadAdjacencyGraph: () => {
 			const adj = new Map();
 			adj.set("station1", ["station2"]);
