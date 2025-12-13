@@ -43,6 +43,20 @@ SELECT ?station ?interchange_station WHERE {
 }
 ORDER BY (?station)
 
+# CPTM stations
+
+SELECT ?station ?connecting_line ?connecting_lineLabel ?coordinate_location ?station_code ?stationLabel WHERE {
+  ?station wdt:P16 wd:Q110914375; # its transport network is São Paulo Metropolitan Trains
+           wdt:P31 wd:Q55488; # station is railway station
+           wdt:P5817 wd:Q55654238; # it is in use
+           wdt:P1192 ?connecting_line.
+  OPTIONAL { ?station wdt:P625 ?coordinate_location. }
+  OPTIONAL { ?station wdt:P296 ?station_code. }
+  ?connecting_line wdt:P5817 wd:Q55654238. # line is in use
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "pt,en". }
+}
+ORDER BY (?stationLabel)
+
 */
 
 // This module exports an async function `loadStations()` that reads ./src/stations.csv
