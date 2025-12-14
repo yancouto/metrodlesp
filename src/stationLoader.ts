@@ -60,6 +60,7 @@ ORDER BY (?stationLabel)
 # All adjacencies
 SELECT DISTINCT ?station ?adjacent_station WHERE {
   VALUES ?network { wd:Q483343 wd:Q110914375 }
+  VALUES ?network2 { wd:Q483343 wd:Q110914375 }
   ?station wdt:P31/wdt:P279* wd:Q55488; # station is railway station
     wdt:P16 ?network; # in CPTM+Metro
     wdt:P5817 wd:Q55654238; # in use
@@ -67,7 +68,7 @@ SELECT DISTINCT ?station ?adjacent_station WHERE {
   ?adjacent_station_prop ps:P197 ?adjacent_station; # the adjacent station
     (pq:P81|pq:P1192) ?connecting_line. # the connecting line
   ?adjacent_station wdt:P5817 wd:Q55654238. # adjacent station in use
-  ?connecting_line wdt:P16 ?network; # connecting line in CPTM
+  ?connecting_line wdt:P16 ?network2; # connecting line in CPTM
     wdt:P5817 wd:Q55654238. # and in use
   SERVICE wikibase:label { bd:serviceParam wikibase:language "pt,en". }
 }
@@ -76,12 +77,13 @@ ORDER BY ?station ?adjacent_station
 # All interchanges: No new one?
 SELECT ?station ?interchange_station WHERE {
   VALUES ?network { wd:Q483343 wd:Q110914375 }
+  VALUES ?network2 { wd:Q483343 wd:Q110914375 }
   ?station wdt:P31/wdt:P279* wd:Q55488; # is a subway station
     wdt:P16 ?network; # in SP subway
     wdt:P5817 wd:Q55654238; # in use
     wdt:P833 ?interchange_station. # interchanges with this
   ?interchange_station wdt:P31/wdt:P279* wd:Q55488; # is a subway station
-    wdt:P16 ?network; # in SP subway/CPTM
+    wdt:P16 ?network2; # in SP subway/CPTM
     wdt:P5817 wd:Q55654238; # in use
   SERVICE wikibase:label { bd:serviceParam wikibase:language "pt,en". }
 }
@@ -148,6 +150,8 @@ function normalizeLineLabel(label: string): LineId | undefined {
 }
 
 const stationsCache: { base: Station[] | null; cptm: Station[] | null } = {base: null, cptm: null};
+// Map each original wikidata id to its merged representative wikidata id (per mode)
+const idToRepCache: { base: Map<string, string> | null; cptm: Map<string, string> | null } = { base: null, cptm: null };
 
 function parsePoint(s: string): { lon: number; lat: number } | null {
 	// Expected format: Point(lon lat)
@@ -167,6 +171,35 @@ export type LoadStationsOptions = {
     includeCPTM?: boolean;
 };
 
+function normalizeNameForCanon(n: string): string {
+	let s = n.trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+	// Remove known prefixes
+	s = s.replace(/^(estacao|estação)\s+/i, "");
+	s = s.replace(/^terminal\s+intermodal\s+/i, "");
+	// Drop parenthetical suffixes like (metrô), (CPTM)
+	s = s.replace(/\s*\([^)]*\)\s*/g, " ");
+	// Remove leading Portuguese articles
+	s = s.replace(/^(da|de|do|das|dos)\s+/i, "");
+	// Collapse whitespace
+	return s.replace(/\s+/g, " ").trim();
+}
+function startsWithArticlePT(name: string): boolean {
+	return /^(da|de|do|das|dos)\s+/i.test(name);
+}
+function hasTerminalPrefix(name: string): boolean {
+	return /^\s*terminal\s+intermodal\b/i.test(name);
+}
+function chooseRepresentative(a: Station, b: Station): Station {
+	// Prefer variant without leading article; then without Terminal Intermodal; then shorter name
+	const aArt = startsWithArticlePT(a.name);
+	const bArt = startsWithArticlePT(b.name);
+	if (aArt !== bArt) return aArt ? b : a;
+	const aTerm = hasTerminalPrefix(a.name);
+	const bTerm = hasTerminalPrefix(b.name);
+	if (aTerm !== bTerm) return aTerm ? b : a;
+	return a.name.length <= b.name.length ? a : b;
+}
+
 export async function loadStations(_opts: LoadStationsOptions = {}): Promise<Station[]> {
 	const includeCPTM = !!_opts.includeCPTM;
 	const cacheKey = includeCPTM ? "cptm" : "base";
@@ -181,7 +214,7 @@ export async function loadStations(_opts: LoadStationsOptions = {}): Promise<Sta
     const text = await res.text();
 	const rows = await parseCSVObjects(text);
 
-	const map = new Map<string, Station>();
+	const byId = new Map<string, Station>();
 
 	for (const r of rows) {
 		// Don't use station code because one station might have multiple codes
@@ -191,10 +224,10 @@ export async function loadStations(_opts: LoadStationsOptions = {}): Promise<Sta
 			.replace(/\s*\(metrô\)\s*/i, "")
 			.trim();
 		const wikidataId = extractQId(r["station"])!;
-		let entry = map.get(wikidataId);
+		let entry = byId.get(wikidataId);
 		if (!entry) {
 			entry = { id: wikidataId, name, lines: [] as LineId[], wikidataId };
-			map.set(wikidataId, entry);
+			byId.set(wikidataId, entry);
 		}
 		// Parse and attach coordinates if present
 		const coordRaw = (r["coordinate_location"] || "").trim();
@@ -215,9 +248,46 @@ export async function loadStations(_opts: LoadStationsOptions = {}): Promise<Sta
 			}
 		}
 	}
-	const result = Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
-	(stationsCache as any)[cacheKey] = result;
-	return result;
+
+	// Merge by canonical name
+	const groups = new Map<string, Station[]>();
+	for (const st of byId.values()) {
+		const key = normalizeNameForCanon(st.name);
+		const arr = groups.get(key);
+		if (arr) arr.push(st);
+		else groups.set(key, [st]);
+	}
+
+	const idToRep = new Map<string, string>();
+	const merged: Station[] = [];
+	for (const arr of groups.values()) {
+		// choose representative among variants
+		let rep = arr[0];
+		for (let i = 1; i < arr.length; i++) rep = chooseRepresentative(rep, arr[i]);
+		const unionLines = Array.from(new Set(arr.flatMap(s => s.lines))).sort();
+		// Prefer coordinates from representative; if missing, take first available
+		let lat = rep.lat, lon = rep.lon;
+		if (typeof lat !== "number" || typeof lon !== "number") {
+			for (const s of arr) {
+				if (typeof s.lat === "number" && typeof s.lon === "number") {
+					lat = s.lat; lon = s.lon; break;
+				}
+			}
+		}
+		const repStation: Station = { id: rep.id, wikidataId: rep.wikidataId, name: rep.name, lines: unionLines };
+		if (typeof lat === "number" && typeof lon === "number") {
+			repStation.lat = lat; repStation.lon = lon;
+		}
+		merged.push(repStation);
+		for (const s of arr) idToRep.set(s.id, rep.id);
+	}
+
+	// Cache id mapping for this mode
+	(idToRepCache as any)[cacheKey] = idToRep;
+	// Sort and cache stations
+	merged.sort((a, b) => a.name.localeCompare(b.name));
+	(stationsCache as any)[cacheKey] = merged;
+	return merged;
 }
 
 // Based on wikidata ids
@@ -240,9 +310,35 @@ export async function loadAdjacencyGraph(_opts: { includeCPTM?: boolean } = {}):
 	const interUrl = includeCPTM
 		? new URL("./data/interchanges_with_cptm.csv", import.meta.url)
 		: new URL("./interchanges.csv", import.meta.url);
+	// Load raw graphs keyed by original ids
+	const rawAdjacent = await loadAdjacencyCsv(adjUrl, "station", "adjacent_station");
+	const rawInter = await loadAdjacencyCsv(interUrl, "station", "interchange_station");
+
+	// Ensure we have the id→representative mapping for this mode
+	let idToRep = idToRepCache[cacheKey as keyof typeof idToRepCache];
+	if (!idToRep) {
+		await loadStations({ includeCPTM });
+		idToRep = idToRepCache[cacheKey as keyof typeof idToRepCache] || new Map();
+	}
+	const toRep = (id: string) => idToRep!.get(id) || id;
+
+	function remap(graph: Map<string, Set<string>>): Map<string, Set<string>> {
+		const out = new Map<string, Set<string>>();
+		for (const [a, set] of graph.entries()) {
+			const ra = toRep(a);
+			for (const b of set) {
+				const rb = toRep(b);
+				if (ra === rb) continue; // collapse self-loops created by merging
+				if (!out.has(ra)) out.set(ra, new Set());
+				out.get(ra)!.add(rb);
+			}
+		}
+		return out;
+	}
+
 	const built: AdjacencyGraph = {
-		adjacent: await loadAdjacencyCsv(adjUrl, "station", "adjacent_station"),
-		interchange: await loadAdjacencyCsv(interUrl, "station", "interchange_station"),
+		adjacent: remap(rawAdjacent),
+		interchange: remap(rawInter),
 	};
 	(adjCache as any)[cacheKey] = built;
 	return built;

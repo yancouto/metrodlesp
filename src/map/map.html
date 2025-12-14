@@ -17,7 +17,7 @@
 <div id="map"></div>
 <script>
 	const WIDTH = 512,
-		HEIGHT = 512; // or 640x640
+		HEIGHT = 512; // or 640x6401
 	const MAPTILER_KEY = new URLSearchParams(location.search).get("k");
     const styleUrl = `https://api.maptiler.com/maps/streets/style.json?key=${MAPTILER_KEY}`;
 
@@ -47,6 +47,8 @@
 		],
 	};
     const dataUrl = params.get("lines");
+    const knownParam = params.get("known");
+    const knownLines = knownParam ? knownParam.split(",").map(s => s.trim()).filter(Boolean) : [];
 
     // Always set up layers on load; conditionally add lines if a data URL is provided
     map.on("load", async () => {
@@ -54,20 +56,35 @@
         if (dataUrl) {
             try {
                 const resp = await fetch(dataUrl);
-                if (resp.ok) {
+                if (!resp.ok) {
+                    console.warn("Lines overlay fetch failed", { url: dataUrl, status: resp.status, statusText: resp.statusText });
+                } else {
                     const geojson = await resp.json();
-                    map.addSource("custom-geojson", {type: "geojson", data: geojson});
-                    map.addLayer({
-                        id: "custom-lines",
-                        type: "line",
-                        source: "custom-geojson",
-                        filter: ["==", ["geometry-type"], "LineString"],
-                        paint: {
-                            "line-color": "#8a8a8a",
-                            "line-width": 3,
-                            "line-opacity": 1.0,
-                        },
-                    });
+                    if (geojson) {
+                        try {
+                            map.addSource("custom-geojson", {type: "geojson", data: geojson});
+                            map.addLayer({
+                                id: "custom-lines",
+                                type: "line",
+                                source: "custom-geojson",
+                                filter: ["match", ["geometry-type"], ["LineString", "MultiLineString"], true, false],
+                                paint: {
+                                    // Show the real line color only for known (identified) lines; others in black
+                                    "line-color": [
+                                        "case",
+                                        ["in", ["get", "ref"], ["literal", knownLines]],
+                                        ["coalesce", ["get","colour"], ["get","color"], "#8a8a8a"],
+                                        "#000000"
+                                    ],
+                                    "line-width": 3,
+                                    "line-opacity": 1.0,
+                                },
+                            });
+                            const count = Array.isArray(geojson.features) ? geojson.features.length : 0;
+                        } catch (addErr) {
+                            console.warn("Failed to add lines overlay to map", addErr);
+                        }
+                    }
                 }
             } catch (e) {
                 console.warn("Failed to load custom lines overlay:", e);

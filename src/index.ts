@@ -61,9 +61,12 @@ function stationByName(name: string) {
 }
 
 function compareLines(guess: Station, solution: Station): { line: Line; match: boolean }[] {
-	// Only evaluate the guessed station's lines and mark whether each exists in the solution.
+	// Stations are already merged at load time; compare directly
 	const solSet = new Set(solution.lines);
-	return guess.lines.map(id => ({ line: LINES[id], match: solSet.has(id) }));
+	return guess.lines
+		.slice()
+		.sort()
+		.map(id => ({line: LINES[id], match: solSet.has(id)}));
 }
 
 function lineChipsHTML(items: { line: Line; match: boolean }[]) {
@@ -185,14 +188,17 @@ let dailyRotation: number;
 let includeCPTM: boolean;
 let openedForCptmPrompt = false;
 const cptmNewHint = document.getElementById("cptmNewHint") as HTMLParagraphElement | null;
+const hardModeHarderHint = document.getElementById("hardModeHarderHint") as HTMLParagraphElement | null;
 
 function updateCptmHintVisibility() {
 	try {
-		if (!cptmNewHint) return;
 		const seen = state.loadCptmPromptSeen();
-		cptmNewHint.style.display = openedForCptmPrompt && !seen ? "block" : "none";
+		const show = openedForCptmPrompt && !seen;
+		if (cptmNewHint) cptmNewHint.style.display = show ? "block" : "none";
+		if (hardModeHarderHint) hardModeHarderHint.style.display = show ? "block" : "none";
 	} catch {
 		if (cptmNewHint) cptmNewHint.style.display = openedForCptmPrompt ? "block" : "none";
+		if (hardModeHarderHint) hardModeHarderHint.style.display = openedForCptmPrompt ? "block" : "none";
 	}
 }
 
@@ -378,7 +384,7 @@ function renderSuggestions() {
 		if ((qn.length >= 2 && normalize(l.name).includes(qn)) || String(l.id) === qn) lineHits.push(l.id);
 	});
 	// Build HTML
-	const seen = new Set<string>();
+	const seen = new Set<string>(); // station ids already shown
 	const parts: string[] = [];
 	// Render name matches (unique, sorted)
 	nameMatches
@@ -519,7 +525,7 @@ function endGame(won: boolean) {
 
 function checkIfEnded() {
 	const solution = stationById(gameState.solutionId);
-	const won = gameState.guesses.some(id => id === solution.id);
+	const won = gameState.guesses.includes(solution.id);
 	if (won) endGame(true);
 	else if (gameState.guesses.length >= 6) endGame(false);
 }
@@ -548,10 +554,8 @@ function onSubmitGuess(name: string) {
  gameState.guesses.push(match.id);
  state.saveState(gameState, includeCPTM);
  renderGuesses();
-	// Only re-render the map if the guess might change its appearance (hard mode progression)
-	if (hardMode && gameState.guesses.length <= 2) {
-		renderMap();
-	}
+	// Re-render the map after each guess so line colors reflect newly identified lines
+	renderMap();
 	if (match.id === solution.id) {
 		setHint(`Acertou! Era ${solution.name}.`);
 	} else {
@@ -575,10 +579,17 @@ function renderMap() {
 		params.set("lat", String(solution.lat));
 		params.set("z", "15"); // default zoom
 	}
-	if (!hardMode || gameState.guesses.length >= 1 || isWon) {
+	if (!hardMode || gameState.guesses.length >= 2 || isWon) {
 		params.set("lines", linesUrl);
+		// Pass known (confirmed) line ids so only those render in color
+		try {
+			const knowledge = logic.getKnownLineKnowledge(gameState, STATIONS);
+			const known = [...knowledge.confirmed.values(), ...knowledge.eliminated.values()];
+			if (known.length) params.set("known", known.join(","));
+		} catch {
+		}
 	}
-	if (hardMode && gameState.guesses.length < 2 && !isWon) {
+	if (hardMode && gameState.guesses.length < 4 && !isWon) {
 		params.set("bearing", String(dailyRotation));
 	}
 	const iframe = document.createElement("iframe");
@@ -596,23 +607,23 @@ function renderMap() {
 
 	indicatorsDiv.innerHTML = "";
 	if (hardMode && !isWon) {
-		if (gameState.guesses.length < 2) {
+		if (gameState.guesses.length < 4) {
 			const rotated = document.createElement("div");
 			rotated.className = "map-indicator";
 			rotated.title = "Mapa girado";
 			rotated.textContent = "🔄";
 			rotated.addEventListener("click", () => {
-				showToast("O mapa está rotacionado. Ele voltará ao normal após o segundo erro.");
+				showToast("O mapa está rotacionado. Ele voltará ao normal após o quarto erro.");
 			});
 			indicatorsDiv.appendChild(rotated);
 		}
-		if (gameState.guesses.length < 1) {
+		if (gameState.guesses.length < 2) {
 			const hidden = document.createElement("div");
 			hidden.className = "map-indicator";
 			hidden.title = "Linhas ocultas";
 			hidden.textContent = "👁️‍🗨️";
 			hidden.addEventListener("click", () => {
-				showToast("As linhas do metrô estão ocultas. Elas aparecerão após o primeiro erro.");
+				showToast("As linhas do metrô estão ocultas. Elas aparecerão após o segundo erro.");
 			});
 			indicatorsDiv.appendChild(hidden);
 		}
@@ -722,7 +733,17 @@ function initUI() {
   settingsClose.addEventListener("click", () => {
     // If we showed Settings as a CPTM prompt, consider it seen on close
     if (openedForCptmPrompt) {
-      try { state.saveCptmPromptSeen(); } catch {}
+			try {
+				// If user closes without enabling, count as dismissed
+				if (!includeCPTM) {
+					try {
+						gtag("event", "cptm_prompt_dismissed");
+					} catch {
+					}
+				}
+				state.saveCptmPromptSeen();
+			} catch {
+			}
       openedForCptmPrompt = false;
     }
     settingsDialog.close();
@@ -779,6 +800,13 @@ function initUI() {
 
     cptmToggle.addEventListener("change", () => {
         includeCPTM = cptmToggle.checked;
+			try {
+				gtag("event", "cptm_toggle", {enabled: includeCPTM, source: openedForCptmPrompt ? "prompt" : "settings"});
+				if (openedForCptmPrompt && includeCPTM) {
+					gtag("event", "cptm_prompt_accepted");
+				}
+			} catch {
+			}
         state.saveIncludeCPTM(includeCPTM);
         state.saveCptmPromptSeen();
         // Reload to reinitialize stations/data and daily solution with the new setting
@@ -793,6 +821,10 @@ function initUI() {
 async function boot() {
     scheduleMidnightReset();
     includeCPTM = state.loadIncludeCPTM();
+	try {
+		gtag("event", "cptm_mode_impression", {mode: includeCPTM ? "cptm" : "metro"});
+	} catch {
+	}
     STATIONS = await loadStations({ includeCPTM });
     gameState = state.loadState(todayKey, STATIONS, includeCPTM);
     stats = state.loadStats(includeCPTM);
