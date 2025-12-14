@@ -7,7 +7,7 @@ export interface Line {
 
 // Source of truth for supported lines in the app
 export const LINES: Record<string, Line> = {
-	"1": { id: "1", name: "Linha 1-Azul", color: '#00529f' },
+	"1": { id: "1", name: "Linha 1-Azul", color: "#00529f" },
 	"2": { id: "2", name: "Linha 2-Verde", color: "#008061" },
 	"3": { id: "3", name: "Linha 3-Vermelha", color: "#ee4034" },
 	"4": { id: "4", name: "Linha 4-Amarela", color: "#fed400" },

@@ -149,9 +149,9 @@ function normalizeLineLabel(label: string): LineId | undefined {
 	throw new Error(`Unknown line: ${raw}`);
 }
 
-const stationsCache: { base: Station[] | null; cptm: Station[] | null } = {base: null, cptm: null};
+const stationsCache: { base: Station[] | null; cptm: Station[] | null } = { base: null, cptm: null };
 // Map each original wikidata id to its merged representative wikidata id (per mode)
-const idToRepCache: { base: Map<string, string> | null; cptm: Map<string, string> | null } = {base: null, cptm: null};
+const idToRepCache: { base: Map<string, string> | null; cptm: Map<string, string> | null } = { base: null, cptm: null };
 
 function parsePoint(s: string): { lon: number; lat: number } | null {
 	// Expected format: Point(lon lat)
@@ -168,11 +168,15 @@ function extractQId(url: string): string {
 }
 
 export type LoadStationsOptions = {
-    includeCPTM?: boolean;
+	includeCPTM?: boolean;
 };
 
 function normalizeNameForCanon(n: string): string {
-	let s = n.trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+	let s = n
+		.trim()
+		.normalize("NFD")
+		.replace(/[\u0300-\u036f]/g, "")
+		.toLowerCase();
 	// Remove known prefixes
 	s = s.replace(/^(estacao|estação)\s+/i, "");
 	s = s.replace(/^terminal\s+intermodal\s+/i, "");
@@ -212,9 +216,9 @@ export async function loadStations(_opts: LoadStationsOptions = {}): Promise<Sta
 	const url = includeCPTM
 		? new URL("./data/stations_with_cptm.csv", import.meta.url)
 		: new URL("./stations.csv", import.meta.url);
-    const res = await fetch(url as any, { cache: "no-cache" });
-    if (!res.ok) throw new Error("Falha ao carregar stations.csv");
-    const text = await res.text();
+	const res = await fetch(url as any, { cache: "no-cache" });
+	if (!res.ok) throw new Error("Falha ao carregar stations.csv");
+	const text = await res.text();
 	const rows = await parseCSVObjects(text);
 
 	const byId = new Map<string, Station>();
@@ -269,7 +273,8 @@ export async function loadStations(_opts: LoadStationsOptions = {}): Promise<Sta
 		for (let i = 1; i < arr.length; i++) rep = chooseRepresentative(rep, arr[i]);
 		const unionLines = Array.from(new Set(arr.flatMap(s => s.lines))).sort();
 		// Prefer coordinates from representative; if missing, take first available
-		let lat = rep.lat, lon = rep.lon;
+		let lat = rep.lat,
+			lon = rep.lon;
 		if (typeof lat !== "number" || typeof lon !== "number") {
 			for (const s of arr) {
 				if (typeof s.lat === "number" && typeof s.lon === "number") {
@@ -279,7 +284,7 @@ export async function loadStations(_opts: LoadStationsOptions = {}): Promise<Sta
 				}
 			}
 		}
-		const repStation: Station = {id: rep.id, wikidataId: rep.wikidataId, name: rep.name, lines: unionLines};
+		const repStation: Station = { id: rep.id, wikidataId: rep.wikidataId, name: rep.name, lines: unionLines };
 		if (typeof lat === "number" && typeof lon === "number") {
 			repStation.lat = lat;
 			repStation.lon = lon;
@@ -302,7 +307,7 @@ export type AdjacencyGraph = {
 	adjacent: Map<string, Set<string>>;
 	interchange: Map<string, Set<string>>;
 };
-const adjCache: { base: AdjacencyGraph | null; cptm: AdjacencyGraph | null } = {base: null, cptm: null};
+const adjCache: { base: AdjacencyGraph | null; cptm: AdjacencyGraph | null } = { base: null, cptm: null };
 
 export async function loadAdjacencyGraph(_opts: { includeCPTM?: boolean } = {}): Promise<AdjacencyGraph> {
 	const includeCPTM = !!_opts.includeCPTM;
@@ -317,12 +322,15 @@ export async function loadAdjacencyGraph(_opts: { includeCPTM?: boolean } = {}):
 		? new URL("./data/interchanges_with_cptm.csv", import.meta.url)
 		: new URL("./interchanges.csv", import.meta.url);
 	// Load raw graphs keyed by original ids
-	const [rawAdjacent, rawInter] = await Promise.all([loadAdjacencyCsv(adjUrl, "station", "adjacent_station"), loadAdjacencyCsv(interUrl, "station", "interchange_station")]);
+	const [rawAdjacent, rawInter] = await Promise.all([
+		loadAdjacencyCsv(adjUrl, "station", "adjacent_station"),
+		loadAdjacencyCsv(interUrl, "station", "interchange_station"),
+	]);
 
 	// Ensure we have the id→representative mapping for this mode
 	let idToRep = idToRepCache[cacheKey as keyof typeof idToRepCache];
 	if (!idToRep) {
-		await loadStations({includeCPTM});
+		await loadStations({ includeCPTM });
 		idToRep = idToRepCache[cacheKey as keyof typeof idToRepCache] || new Map();
 	}
 	const toRep = (id: string) => idToRep!.get(id) || id;

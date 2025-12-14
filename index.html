@@ -59,11 +59,11 @@
 		</script>
 		<header class="topbar">
 			<h1>Metrodle SP <span class="tagline">Que estação é essa?</span></h1>
-   <div class="actions">
-                <button id="settingsBtn" aria-label="Configurações">⚙️</button>
-                <button id="statsBtn" aria-label="Estatísticas">📊</button>
-                <button id="helpBtn" aria-label="Ajuda">❔</button>
-            </div>
+			<div class="actions">
+				<button id="settingsBtn" aria-label="Configurações">⚙️</button>
+				<button id="statsBtn" aria-label="Estatísticas">📊</button>
+				<button id="helpBtn" aria-label="Ajuda">❔</button>
+			</div>
 		</header>
 
 		<main class="container">
@@ -153,60 +153,78 @@
 				<p>Sim. O site é responsivo e funciona bem em dispositivos móveis.</p>
 			</details>
 
-            <h3 style="margin-top: 16px">Opções avançadas</h3>
-            <p>
-                Você pode ativar o <strong>modo difícil</strong> e incluir as <strong>estações da CPTM</strong> nas
-                <a href="#" id="openSettingsFromHelp" class="accent-link">Configurações</a>.
-            </p>
-            <div class="dialog-actions">
-                <button id="helpClose" class="dialog-button">Fechar</button>
-            </div>
-        </dialog>
+			<h3 style="margin-top: 16px">Opções avançadas</h3>
+			<p>
+				Você pode ativar o <strong>modo difícil</strong> e incluir as <strong>estações da CPTM</strong> nas
+				<a href="#" id="openSettingsFromHelp" class="accent-link">Configurações</a>.
+			</p>
+			<div class="dialog-actions">
+				<button id="helpClose" class="dialog-button">Fechar</button>
+			</div>
+		</dialog>
 
-        <dialog id="settingsDialog">
-            <h2>Configurações ⚙️</h2>
-            <section style="display: grid; gap: 10px">
-                <div>
-					<p id="hardModeHarderHint"
-					   style="display: none; margin: 0 0 8px 0; font-size: 0.95em; background: #7a1ea1; color: #eee; padding: 8px; border-radius: 6px;">
-						O modo difícil ficou mais difícil! As linhas só aparecem após <strong>2
-						erros</strong> e a rotação só desaparece após <strong>4 erros</strong>.
+		<dialog id="settingsDialog">
+			<h2>Configurações ⚙️</h2>
+			<section style="display: grid; gap: 10px">
+				<div>
+					<p
+						id="hardModeHarderHint"
+						style="
+							display: none;
+							margin: 0 0 8px 0;
+							font-size: 0.95em;
+							background: #7a1ea1;
+							color: #eee;
+							padding: 8px;
+							border-radius: 6px;
+						"
+					>
+						O modo difícil ficou mais difícil! As linhas só aparecem após <strong>2 erros</strong> e a rotação só
+						desaparece após <strong>4 erros</strong>.
 					</p>
-                    <p style="margin: 0 0 6px 0"><strong>⚔️ Modo Difícil</strong></p>
-                    <p style="margin: 0 0 8px 0; opacity: 0.85; font-size: 0.95em">
-                        O mapa começa rotacionado e sem as linhas do metrô. Após erros, os elementos retornam.
-						Além disso, não é possível explorar o mapa após 5 erros.
-                    </p>
+					<p style="margin: 0 0 6px 0"><strong>⚔️ Modo Difícil</strong></p>
+					<p style="margin: 0 0 8px 0; opacity: 0.85; font-size: 0.95em">
+						O mapa começa rotacionado e sem as linhas do metrô. Após erros, os elementos retornam. Além disso, não é
+						possível explorar o mapa após 5 erros.
+					</p>
 					<label class="toggle-switch">
-                        <input type="checkbox" id="hardModeToggle" />
-                        <span class="slider"></span>
-                        Ativar modo difícil
-                    </label>
-                </div>
-				<br>
-                <div>
-					<p id="cptmNewHint"
-					   style="display: none; margin: 0 0 8px 0; font-size: 0.95em; background: #0e3c87; color: #ccc; padding: 8px; border-radius: 6px;">
+						<input type="checkbox" id="hardModeToggle" />
+						<span class="slider"></span>
+						Ativar modo difícil
+					</label>
+				</div>
+				<br />
+				<div>
+					<p
+						id="cptmNewHint"
+						style="
+							display: none;
+							margin: 0 0 8px 0;
+							font-size: 0.95em;
+							background: #0e3c87;
+							color: #ccc;
+							padding: 8px;
+							border-radius: 6px;
+						"
+					>
 						Novo! Agora você pode incluir as estações da <strong>CPTM</strong> no Metrodle. Experimente 👇
 					</p>
 					<p style="margin: 12px 0 6px 0"><strong>🚆 Estações da CPTM</strong></p>
 					<p style="margin: 0 0 8px 0; opacity: 0.85; font-size: 0.95em">
-                        Inclui as estações da CPTM (trens) nas sugestões e na seleção diária.
-                    </p>
-                    <label class="toggle-switch">
-                        <input type="checkbox" id="cptmToggle" />
-                        <span class="slider"></span>
-                        Incluir estações da CPTM
-                    </label>
-                    <p style="font-size: 0.9em; opacity: 0.8; margin-top: 6px">
-                        Alterar estas opções reinicia o jogo.
-                    </p>
-                </div>
-            </section>
-            <div class="dialog-actions">
-                <button id="settingsClose" class="dialog-button">Fechar</button>
-            </div>
-        </dialog>
+						Inclui as estações da CPTM (trens) nas sugestões e na seleção diária.
+					</p>
+					<label class="toggle-switch">
+						<input type="checkbox" id="cptmToggle" />
+						<span class="slider"></span>
+						Incluir estações da CPTM
+					</label>
+					<p style="font-size: 0.9em; opacity: 0.8; margin-top: 6px">Alterar estas opções reinicia o jogo.</p>
+				</div>
+			</section>
+			<div class="dialog-actions">
+				<button id="settingsClose" class="dialog-button">Fechar</button>
+			</div>
+		</dialog>
 
 		<dialog id="statsDialog">
 			<h2>Estatísticas 📊</h2>
@@ -242,7 +260,7 @@
 					<a href="#" id="tryHardModeLink">Tente o modo difícil!</a>
 				</p>
 			</div>
-   <button id="statsClose" class="dialog-button">Fechar</button>
+			<button id="statsClose" class="dialog-button">Fechar</button>
 		</dialog>
 
 		<script type="module" src="src/index.ts"></script>

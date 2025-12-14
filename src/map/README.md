@@ -32,6 +32,7 @@ npm run compress:lines
 ```
 
 What the script does:
+
 - Reads `src/map/original_lines.geojson`.
 - Keeps only geometry and the properties used by the app: `ref` and `colour`/`color`.
 - Rounds all coordinates to 5 decimal places (~1.1 m) to reduce size.

@@ -1,5 +1,5 @@
-import type {Station} from "./stationLoader.js";
-import {pickDailyStation} from "./logic.js";
+import type { Station } from "./stationLoader.js";
+import { pickDailyStation } from "./logic.js";
 
 export type GameState = {
 	solutionId: string;
@@ -35,37 +35,37 @@ export function loadHardMode(): boolean {
 }
 
 export function saveHardMode(isEnabled: boolean) {
-    localStorage.setItem(HARD_MODE_KEY, String(isEnabled));
+	localStorage.setItem(HARD_MODE_KEY, String(isEnabled));
 }
 
 // CPTM mode (include CPTM train stations)
 export function loadIncludeCPTM(): boolean {
-    try {
-        const raw = localStorage.getItem(INCLUDE_CPTM_KEY);
-        return raw === "true";
-    } catch {
-        return false;
-    }
+	try {
+		const raw = localStorage.getItem(INCLUDE_CPTM_KEY);
+		return raw === "true";
+	} catch {
+		return false;
+	}
 }
 
 export function saveIncludeCPTM(isEnabled: boolean) {
-    try {
-        localStorage.setItem(INCLUDE_CPTM_KEY, String(isEnabled));
-    } catch {}
+	try {
+		localStorage.setItem(INCLUDE_CPTM_KEY, String(isEnabled));
+	} catch {}
 }
 
 export function loadCptmPromptSeen(): boolean {
-    try {
-        return localStorage.getItem(CPTM_PROMPT_SEEN_KEY) === "1";
-    } catch {
-        return false;
-    }
+	try {
+		return localStorage.getItem(CPTM_PROMPT_SEEN_KEY) === "1";
+	} catch {
+		return false;
+	}
 }
 
 export function saveCptmPromptSeen() {
-    try {
-        localStorage.setItem(CPTM_PROMPT_SEEN_KEY, "1");
-    } catch {}
+	try {
+		localStorage.setItem(CPTM_PROMPT_SEEN_KEY, "1");
+	} catch {}
 }
 
 export function loadState(dateKey: string, stations: Station[], includeCPTM: boolean = false): GameState {
@@ -86,7 +86,7 @@ export function loadState(dateKey: string, stations: Station[], includeCPTM: boo
 		}
 	}
 	const solution = pickDailyStation(dateKey, stations);
-	if ((import.meta as any).env?.DEV) console.log('DEV', solution);
+	if ((import.meta as any).env?.DEV) console.log("DEV", solution);
 	const key = includeCPTM ? STORAGE_KEY_CPTM : STORAGE_KEY;
 	const raw = localStorage.getItem(key);
 	if (raw) {

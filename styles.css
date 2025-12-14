@@ -72,13 +72,13 @@ body {
 	position: relative;
 }
 .map-image {
-    width: 100%;
-    aspect-ratio: 16/9; /* enforce perfect square */
-    background: #111;
-    border: 1px solid #222;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
+	width: 100%;
+	aspect-ratio: 16/9; /* enforce perfect square */
+	background: #111;
+	border: 1px solid #222;
+	border-radius: 8px;
+	display: flex;
+	align-items: center;
 	justify-content: center;
 	overflow: hidden;
 	/* Important: do not cap height, let aspect-ratio define it */
@@ -423,14 +423,14 @@ button {
 }
 
 #statsDialog h2 {
-    text-align: center;
+	text-align: center;
 	margin: 0 0 8px;
 }
 
 /* Settings hints: slightly smaller font */
 #hardModeHarderHint,
 #cptmNewHint {
-    font-size: 0.9em !important;
+	font-size: 0.9em !important;
 }
 
 #statsSummary {
@@ -532,7 +532,6 @@ button {
 	clip: rect(0, 0, 0, 0);
 	border: 0;
 }
-
 
 :root {
 	--kb-h: 192px; /* virtual keyboard height reservation */
@@ -700,12 +699,12 @@ button:disabled {
 
 #tryHardModeLink,
 .accent-link {
-    color: #58a6ff;
-    text-decoration: none;
+	color: #58a6ff;
+	text-decoration: none;
 }
 #tryHardModeLink:hover,
 .accent-link:hover {
-    text-decoration: underline;
+	text-decoration: underline;
 }
 
 /* Share image export styles (used only for image export) */

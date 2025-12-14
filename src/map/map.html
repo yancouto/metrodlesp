@@ -3,203 +3,208 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <style>
-    html,
-    body,
-    #map {
-        margin: 0;
-        height: 100%;
-        width: 100%;
-        background: #111;
-    }
+	html,
+	body,
+	#map {
+		margin: 0;
+		height: 100%;
+		width: 100%;
+		background: #111;
+	}
 </style>
 <link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet" />
 <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
 <div id="map"></div>
 <script>
-    const WIDTH = 512,
-        HEIGHT = 512; // or 640x6401
-    const MAPTILER_KEY = new URLSearchParams(location.search).get("k");
-    const styleUrl = `https://api.maptiler.com/maps/streets/style.json?key=${MAPTILER_KEY}`;
+	const WIDTH = 512,
+		HEIGHT = 512; // or 640x6401
+	const MAPTILER_KEY = new URLSearchParams(location.search).get("k");
+	const styleUrl = `https://api.maptiler.com/maps/streets/style.json?key=${MAPTILER_KEY}`;
 
-    // Read center from URL query params if provided
-    const params = new URLSearchParams(location.search);
-    const qLon = parseFloat(params.get("lon"));
-    const qLat = parseFloat(params.get("lat"));
-    const qZ = parseFloat(params.get("z"));
-    const qBearing = parseFloat(params.get("bearing"));
-    const hasCenter = Number.isFinite(qLon) && Number.isFinite(qLat);
-    const interact = params.get("interact") === "1";
-    // Choose a default center around central SP if none provided
-    const defaultCenter = [-46.636681, -23.599162];
-    let currentCenter = hasCenter ? [qLon, qLat] : defaultCenter.slice();
+	// Read center from URL query params if provided
+	const params = new URLSearchParams(location.search);
+	const qLon = parseFloat(params.get("lon"));
+	const qLat = parseFloat(params.get("lat"));
+	const qZ = parseFloat(params.get("z"));
+	const qBearing = parseFloat(params.get("bearing"));
+	const hasCenter = Number.isFinite(qLon) && Number.isFinite(qLat);
+	const interact = params.get("interact") === "1";
+	// Choose a default center around central SP if none provided
+	const defaultCenter = [-46.636681, -23.599162];
+	let currentCenter = hasCenter ? [qLon, qLat] : defaultCenter.slice();
 
-    // Compute a fixed geographic extent so all devices start with the same visible area.
-    const FIXED_SPAN_METERS = 600; // total width/height in meters (kept in sync with applyFixedView)
-    function boundsForFixedSpan(centerLon, centerLat, spanMeters = FIXED_SPAN_METERS) { // total width/height in meters
-        const half = spanMeters / 2;
-        const metersPerDegLat = 111320; // approx
-        const metersPerDegLon = Math.cos(centerLat * Math.PI / 180) * 111320;
-        const dLat = half / metersPerDegLat;
-        const dLon = half / metersPerDegLon;
-        const sw = [centerLon - dLon, centerLat - dLat];
-        const ne = [centerLon + dLon, centerLat + dLat];
-        return [sw, ne];
-    }
+	// Compute a fixed geographic extent so all devices start with the same visible area.
+	const FIXED_SPAN_METERS = 600; // total width/height in meters (kept in sync with applyFixedView)
+	function boundsForFixedSpan(centerLon, centerLat, spanMeters = FIXED_SPAN_METERS) {
+		// total width/height in meters
+		const half = spanMeters / 2;
+		const metersPerDegLat = 111320; // approx
+		const metersPerDegLon = Math.cos((centerLat * Math.PI) / 180) * 111320;
+		const dLat = half / metersPerDegLat;
+		const dLon = half / metersPerDegLon;
+		const sw = [centerLon - dLon, centerLat - dLat];
+		const ne = [centerLon + dLon, centerLat + dLat];
+		return [sw, ne];
+	}
 
-    // Initialize the map already fitted to the fixed bounds so there is no zoom jump on load
-    const initialBounds = boundsForFixedSpan(currentCenter[0], currentCenter[1], FIXED_SPAN_METERS);
-    const map = new maplibregl.Map({
-        container: "map",
-        style: styleUrl,
-        bounds: initialBounds,
-        fitBoundsOptions: { padding: 0, animate: false },
-        pitch: 0,
-        bearing: Number.isFinite(qBearing) ? qBearing : 0,
-        interactive: interact,
-        preserveDrawingBuffer: true, // needed for toDataURL()
-    });
+	// Initialize the map already fitted to the fixed bounds so there is no zoom jump on load
+	const initialBounds = boundsForFixedSpan(currentCenter[0], currentCenter[1], FIXED_SPAN_METERS);
+	const map = new maplibregl.Map({
+		container: "map",
+		style: styleUrl,
+		bounds: initialBounds,
+		fitBoundsOptions: { padding: 0, animate: false },
+		pitch: 0,
+		bearing: Number.isFinite(qBearing) ? qBearing : 0,
+		interactive: interact,
+		preserveDrawingBuffer: true, // needed for toDataURL()
+	});
 
-    const dataUrl = params.get("lines");
-    const knownParam = params.get("known");
-    const knownLines = knownParam ? knownParam.split(",").map(s => s.trim()).filter(Boolean) : [];
+	const dataUrl = params.get("lines");
+	const knownParam = params.get("known");
+	const knownLines = knownParam
+		? knownParam
+				.split(",")
+				.map(s => s.trim())
+				.filter(Boolean)
+		: [];
 
-    // Pre-start fetch of the overlay so it can happen in parallel with style/map load
-    const overlayPromise = (function() {
-        if (!dataUrl) return Promise.resolve(null);
-        return (async () => {
-            try {
-                const resp = await fetch(dataUrl);
-                if (!resp.ok) {
-                    console.warn("Lines overlay fetch failed", {
-                        url: dataUrl,
-                        status: resp.status,
-                        statusText: resp.statusText,
-                    });
-                    return null;
-                }
-                const geojson = await resp.json();
-                return geojson || null;
-            } catch (e) {
-                console.warn("Failed to load custom lines overlay:", e);
-                return null; // Map should continue without overlay
-            }
-        })();
-    })();
+	// Pre-start fetch of the overlay so it can happen in parallel with style/map load
+	const overlayPromise = (function () {
+		if (!dataUrl) return Promise.resolve(null);
+		return (async () => {
+			try {
+				const resp = await fetch(dataUrl);
+				if (!resp.ok) {
+					console.warn("Lines overlay fetch failed", {
+						url: dataUrl,
+						status: resp.status,
+						statusText: resp.statusText,
+					});
+					return null;
+				}
+				const geojson = await resp.json();
+				return geojson || null;
+			} catch (e) {
+				console.warn("Failed to load custom lines overlay:", e);
+				return null; // Map should continue without overlay
+			}
+		})();
+	})();
 
-    function applyFixedView(center, options = {}) {
-        try {
-            const b = boundsForFixedSpan(center[0], center[1], FIXED_SPAN_METERS);
-            map.fitBounds(b, {padding: 0, bearing: map.getBearing(), pitch: 0, animate: false, ...options});
-        } catch (e) {
-            // ignore
-        }
-    }
+	function applyFixedView(center, options = {}) {
+		try {
+			const b = boundsForFixedSpan(center[0], center[1], FIXED_SPAN_METERS);
+			map.fitBounds(b, { padding: 0, bearing: map.getBearing(), pitch: 0, animate: false, ...options });
+		} catch (e) {
+			// ignore
+		}
+	}
 
-    // Always set up layers on load; conditionally add lines if a data URL is provided
-    map.on("load", async () => {
-        // Add the lines overlay if it was requested and successfully fetched
-        try {
-            const geojson = await overlayPromise;
-            if (geojson) {
-                try {
-                    map.addSource("custom-geojson", { type: "geojson", data: geojson });
-                    map.addLayer({
-                        id: "custom-lines",
-                        type: "line",
-                        source: "custom-geojson",
-                        filter: ["match", ["geometry-type"], ["LineString", "MultiLineString"], true, false],
-                        paint: {
-                            // Show the real line color only for known (identified) lines; others in black
-                            "line-color": [
-                                "case",
-                                ["in", ["get", "ref"], ["literal", knownLines]],
-                                ["coalesce", ["get", "colour"], ["get", "color"], "#8a8a8a"],
-                                "#000000",
-                            ],
-                            "line-width": 3,
-                            "line-opacity": 1.0,
-                        },
-                    });
-                } catch (addErr) {
-                    console.warn("Failed to add lines overlay to map", addErr);
-                }
-            }
-        } catch (_) {
-            // ignore; already logged in overlayPromise
-        }
+	// Always set up layers on load; conditionally add lines if a data URL is provided
+	map.on("load", async () => {
+		// Add the lines overlay if it was requested and successfully fetched
+		try {
+			const geojson = await overlayPromise;
+			if (geojson) {
+				try {
+					map.addSource("custom-geojson", { type: "geojson", data: geojson });
+					map.addLayer({
+						id: "custom-lines",
+						type: "line",
+						source: "custom-geojson",
+						filter: ["match", ["geometry-type"], ["LineString", "MultiLineString"], true, false],
+						paint: {
+							// Show the real line color only for known (identified) lines; others in black
+							"line-color": [
+								"case",
+								["in", ["get", "ref"], ["literal", knownLines]],
+								["coalesce", ["get", "colour"], ["get", "color"], "#8a8a8a"],
+								"#000000",
+							],
+							"line-width": 3,
+							"line-opacity": 1.0,
+						},
+					});
+				} catch (addErr) {
+					console.warn("Failed to add lines overlay to map", addErr);
+				}
+			}
+		} catch (_) {
+			// ignore; already logged in overlayPromise
+		}
 
-        // Add a center-point source and circle layer to highlight the target location
-        map.addSource("center-point", {
-            type: "geojson",
-            data: {
-                type: "FeatureCollection",
-                features: [],
-            },
-        });
-        map.addLayer({
-            id: "center-circle",
-            type: "circle",
-            source: "center-point",
-            paint: {
-                // semi-transparent fill with a bright white stroke so it stands out
-                "circle-radius": 8,
-                "circle-color": "rgba(0,0,0,0.67)",
-                "circle-stroke-color": "#fff",
-                "circle-stroke-width": 2,
-            },
-        });
+		// Add a center-point source and circle layer to highlight the target location
+		map.addSource("center-point", {
+			type: "geojson",
+			data: {
+				type: "FeatureCollection",
+				features: [],
+			},
+		});
+		map.addLayer({
+			id: "center-circle",
+			type: "circle",
+			source: "center-point",
+			paint: {
+				// semi-transparent fill with a bright white stroke so it stands out
+				"circle-radius": 8,
+				"circle-color": "rgba(0,0,0,0.67)",
+				"circle-stroke-color": "#fff",
+				"circle-stroke-width": 2,
+			},
+		});
 
-        // Initialize the center circle with provided query params or current center
-        const has = Number.isFinite(qLon) && Number.isFinite(qLat);
-        const center = has ? [qLon, qLat] : map.getCenter().toArray();
-        currentCenter = center.slice();
-        const src = map.getSource("center-point");
-        if (src) {
-            src.setData({
-                type: "FeatureCollection",
-                features: [{type: "Feature", properties: {}, geometry: {type: "Point", coordinates: center}}],
-            });
-        }
-        // Apply fixed view so all screens show the same geographic extent
-        applyFixedView(center, {animate: false});
+		// Initialize the center circle with provided query params or current center
+		const has = Number.isFinite(qLon) && Number.isFinite(qLat);
+		const center = has ? [qLon, qLat] : map.getCenter().toArray();
+		currentCenter = center.slice();
+		const src = map.getSource("center-point");
+		if (src) {
+			src.setData({
+				type: "FeatureCollection",
+				features: [{ type: "Feature", properties: {}, geometry: { type: "Point", coordinates: center } }],
+			});
+		}
+		// Apply fixed view so all screens show the same geographic extent
+		applyFixedView(center, { animate: false });
 
-        // Re-apply fixed view on resize only when interaction is disabled (to avoid snapping while panning)
-        if (!interact) {
-            try {
-                window.addEventListener("resize", () => applyFixedView(currentCenter, {animate: false}));
-            } catch {
-            }
-        }
-    });
+		// Re-apply fixed view on resize only when interaction is disabled (to avoid snapping while panning)
+		if (!interact) {
+			try {
+				window.addEventListener("resize", () => applyFixedView(currentCenter, { animate: false }));
+			} catch {}
+		}
+	});
 
-    function hideNames() {
-        const style = map.getStyle();
-        for (const layer of style.layers) {
-            // Hide all text/icons
-            if (layer.type === "symbol") map.setLayoutProperty(layer.id, "visibility", "none");
-        }
-    }
+	function hideNames() {
+		const style = map.getStyle();
+		for (const layer of style.layers) {
+			// Hide all text/icons
+			if (layer.type === "symbol") map.setLayoutProperty(layer.id, "visibility", "none");
+		}
+	}
 
-    map.on("styledata", () => {
-        hideNames();
-    });
+	map.on("styledata", () => {
+		hideNames();
+	});
 
-    window.renderCentered = async function (lon, lat, zoom = 15) {
-        return new Promise(resolve => {
-            map.once("idle", () => {
-                resolve(map.getCanvas().toDataURL("image/png"));
-            });
-            // Update center circle position if the layer/source exist
-            const src = map.getSource && map.getSource("center-point");
-            currentCenter = [lon, lat];
-            if (src && src.setData) {
-                src.setData({
-                    type: "FeatureCollection",
-                    features: [{type: "Feature", properties: {}, geometry: {type: "Point", coordinates: [lon, lat]}}],
-                });
-            }
-            // Apply fixed view to ensure consistent area across devices, ignore zoom param
-            applyFixedView(currentCenter, {animate: false});
-        });
-    };
+	window.renderCentered = async function (lon, lat, zoom = 15) {
+		return new Promise(resolve => {
+			map.once("idle", () => {
+				resolve(map.getCanvas().toDataURL("image/png"));
+			});
+			// Update center circle position if the layer/source exist
+			const src = map.getSource && map.getSource("center-point");
+			currentCenter = [lon, lat];
+			if (src && src.setData) {
+				src.setData({
+					type: "FeatureCollection",
+					features: [{ type: "Feature", properties: {}, geometry: { type: "Point", coordinates: [lon, lat] } }],
+				});
+			}
+			// Apply fixed view to ensure consistent area across devices, ignore zoom param
+			applyFixedView(currentCenter, { animate: false });
+		});
+	};
 </script>
