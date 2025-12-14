@@ -3,30 +3,50 @@ import fs from "node:fs";
 import path from "node:path";
 
 // We need the REAL stationLoader (not the mock from setup.ts) for these tests
-beforeAll(() => {
+beforeAll(async () => {
+	// Ensure this suite uses the real stationLoader (bypass global mock from setup.ts)
+	try {
+		vi.unmock("../stationLoader");
+		vi.unmock("../stationLoader.js");
+	} catch {}
 	// Minimal fetch mock: load local files from src when stationLoader requests CSVs
 	// Supports both file:// and normal URL strings
 	// @ts-ignore
 	globalThis.fetch = async (input: any) => {
 		const href: string = typeof input === "string" ? input : (input?.url ?? input?.href ?? String(input));
-		let pathname = href;
+		let abs: string | null = null;
+		// Try to interpret as URL first
 		try {
 			const u = new URL(href);
-			pathname = u.protocol === "file:" ? u.pathname : u.pathname;
-		} catch {
-			// not a URL; treat as path
-		}
-		// Resolve to project root-relative path (tests run with cwd at project root)
-		// stationLoader references files under src/...
-		const decoded = decodeURIComponent(pathname.replace(/^\//, ""));
-		let abs = decoded;
-		if (!path.isAbsolute(abs)) {
-			// Try joining with cwd
-			abs = path.join(process.cwd(), decoded);
-			if (!fs.existsSync(abs)) {
-				// Fallback: strip leading dist/ to point back to src/
-				abs = path.join(process.cwd(), decoded.replace(/^dist\//, ""));
+			if (u.protocol === "file:") {
+				abs = decodeURIComponent(u.pathname.replace(/^\//, ""));
+			} else {
+				// For http(s) style paths like /src/adjacencies.csv, map to local file under project
+				const p = decodeURIComponent(u.pathname);
+				if (p.startsWith("/src/")) {
+					abs = path.join(process.cwd(), p.replace(/^\//, ""));
+				} else if (p.includes("/src/")) {
+					abs = path.join(process.cwd(), p.slice(p.indexOf("/src/") + 1));
+				} else {
+					abs = path.join(process.cwd(), p.replace(/^\//, ""));
+				}
 			}
+		} catch {
+			// Not a URL; treat as path relative to CWD
+			abs = path.isAbsolute(href) ? href : path.join(process.cwd(), href);
+		}
+		// Normalize dist → src fallback if needed
+		if (!fs.existsSync(abs)) {
+			const trySrc = abs.replace(/\\dist\\/g, "\\src\\").replace(/\/dist\//g, "/src/");
+			if (fs.existsSync(trySrc)) abs = trySrc;
+		}
+		// As a last resort, if path points to compiled test dir, replace to src
+		if (!fs.existsSync(abs) && /__tests__/.test(abs)) {
+			const guess = abs.replace(/__tests__.*/, "src/adjacencies.csv");
+			if (fs.existsSync(guess)) abs = guess;
+		}
+		if (!fs.existsSync(abs)) {
+			throw new Error(`Test fetch mock could not resolve path: ${href} → ${abs}`);
 		}
 		const text = await fs.promises.readFile(abs, "utf8");
 		return {
@@ -77,15 +97,28 @@ async function loadAll(includeCPTM: boolean) {
 	return { stations, g } as const;
 }
 
+function toSet(v: any): Set<string> {
+	if (v instanceof Set) return v as Set<string>;
+	if (Array.isArray(v)) return new Set<string>(v);
+	// Fallback: try to iterate
+	try {
+		return new Set<string>([...v]);
+	} catch {
+		return new Set<string>();
+	}
+}
+
 async function assertGraphProperties(includeCPTM: boolean) {
 	const { stations, g } = await loadAll(includeCPTM);
 
 	// 1) No self-loops in either adjacency or interchange
 	for (const [u, vs] of g.adjacent) {
-		expect(vs.has(u)).toBe(false);
+		const set = toSet(vs);
+		expect(set.has(u)).toBe(false);
 	}
 	for (const [u, vs] of g.interchange) {
-		expect(vs.has(u)).toBe(false);
+		const set = toSet(vs);
+		expect(set.has(u)).toBe(false);
 	}
 
 	// 2) (Informational) We treat edges as undirected in gameplay; ensure the undirected projection is built
@@ -94,11 +127,11 @@ async function assertGraphProperties(includeCPTM: boolean) {
 
 	// 3) Combined graph connectivity (treat both edge kinds as connections)
 	const combined = new Map<string, Set<string>>();
-	const mergeInto = (src: Map<string, Set<string>>) => {
+	const mergeInto = (src: Map<string, any>) => {
 		for (const [u, vs] of src) {
 			if (!combined.has(u)) combined.set(u, new Set());
 			const set = combined.get(u)!;
-			for (const v of vs) set.add(v);
+			for (const v of toSet(vs)) set.add(v);
 		}
 	};
 	mergeInto(g.adjacent);
@@ -130,7 +163,7 @@ async function assertGraphProperties(includeCPTM: boolean) {
 	}
 }
 
-describe.skip("stationLoader data integrity", () => {
+describe("stationLoader data integrity", () => {
 	test("metro-only graph and stations pass integrity checks", async () => {
 		await assertGraphProperties(false);
 	});

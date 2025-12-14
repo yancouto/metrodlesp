@@ -568,7 +568,6 @@ type MapParams = { showLines: boolean; bearing: number | null; knownCsv: string 
 let lastMapParams: MapParams | null = null;
 
 function computeMapParams(): MapParams {
-	const solution = stationById(gameState.solutionId);
 	const isWon = gameState.status === "won";
 	const showLines = !hardMode || gameState.guesses.length >= 2 || isWon;
 	let knownCsv: string | null = null;

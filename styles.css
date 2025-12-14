@@ -73,7 +73,7 @@ body {
 }
 .map-image {
 	width: 100%;
-	aspect-ratio: 16/9; /* enforce perfect square */
+	aspect-ratio: 16/9;
 	background: #111;
 	border: 1px solid #222;
 	border-radius: 8px;

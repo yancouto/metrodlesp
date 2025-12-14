@@ -36,7 +36,7 @@ vi.mock("../stationLoader", async () => {
 			adj.set("República", ["Luz", "Consolação"]);
 			adj.set("Clínicas", ["Consolação"]);
 			return Promise.resolve({
-				adj,
+				adjacent: adj,
 				interchange: new Map([["Consolação", "Paulista"]]),
 			});
 		},

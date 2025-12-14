@@ -294,10 +294,10 @@ export async function loadStations(_opts: LoadStationsOptions = {}): Promise<Sta
 	}
 
 	// Cache id mapping for this mode
-	(idToRepCache as any)[cacheKey] = idToRep;
+	idToRepCache[cacheKey] = idToRep;
 	// Sort and cache stations
 	merged.sort((a, b) => a.name.localeCompare(b.name));
-	(stationsCache as any)[cacheKey] = merged;
+	stationsCache[cacheKey] = merged;
 	return merged;
 }
 
@@ -353,7 +353,7 @@ export async function loadAdjacencyGraph(_opts: { includeCPTM?: boolean } = {}):
 		adjacent: remap(rawAdjacent),
 		interchange: remap(rawInter),
 	};
-	(adjCache as any)[cacheKey] = built;
+	adjCache[cacheKey] = built;
 	return built;
 }
 
