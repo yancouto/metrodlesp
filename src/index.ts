@@ -554,8 +554,11 @@ function onSubmitGuess(name: string) {
  gameState.guesses.push(match.id);
  state.saveState(gameState, includeCPTM);
  renderGuesses();
-	// Re-render the map after each guess so line colors reflect newly identified lines
-	renderMap();
+	// Re-render the map only if parameters affecting it have changed
+	const newParams = computeMapParams();
+	if (!mapParamsEqual(lastMapParams, newParams)) {
+		renderMap();
+	}
 	if (match.id === solution.id) {
 		setHint(`Acertou! Era ${solution.name}.`);
 	} else {
@@ -564,6 +567,32 @@ function onSubmitGuess(name: string) {
 	}
 	checkIfEnded();
 	if (gameState.status !== "playing") shareBtn.disabled = false;
+}
+
+type MapParams = { showLines: boolean; bearing: number | null; knownCsv: string | null };
+let lastMapParams: MapParams | null = null;
+
+function computeMapParams(): MapParams {
+	const solution = stationById(gameState.solutionId);
+	const isWon = gameState.status === "won";
+	const showLines = !hardMode || gameState.guesses.length >= 2 || isWon;
+	let knownCsv: string | null = null;
+	if (showLines) {
+		try {
+			const knowledge = logic.getKnownLineKnowledge(gameState, STATIONS);
+			const known = [...knowledge.confirmed.values(), ...knowledge.eliminated.values()];
+			knownCsv = known.length ? known.join(",") : null;
+		} catch {
+		}
+	}
+	const bearing = hardMode && gameState.guesses.length < 4 && !isWon ? dailyRotation : null;
+	return {showLines, bearing, knownCsv};
+}
+
+function mapParamsEqual(a: MapParams | null, b: MapParams | null): boolean {
+	if (a === b) return true;
+	if (!a || !b) return false;
+	return a.showLines === b.showLines && a.bearing === b.bearing && a.knownCsv === b.knownCsv;
 }
 
 function renderMap() {
@@ -604,6 +633,9 @@ function renderMap() {
 	iframe.style.border = "0";
 	iframe.setAttribute("loading", "lazy");
 	mapDiv.appendChild(iframe);
+
+	// Update cached params snapshot to avoid unnecessary reloads next time
+	lastMapParams = computeMapParams();
 
 	indicatorsDiv.innerHTML = "";
 	if (hardMode && !isWon) {
