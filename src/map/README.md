@@ -21,3 +21,18 @@ rel(bw.tracks)["type"="route"]->.candidates;
 // This output mode creates the lines but DOES NOT fetch the individual station nodes.
 .clean_routes out geom;
 ```
+
+Building a minimized lines.geojson for the app
+
+- Keep the unedited export as `src/map/original_lines.geojson` (not shipped).
+- Run the compressor to produce the minimized file used in the app:
+
+```
+npm run compress:lines
+```
+
+What the script does:
+- Reads `src/map/original_lines.geojson`.
+- Keeps only geometry and the properties used by the app: `ref` and `colour`/`color`.
+- Rounds all coordinates to 5 decimal places (~1.1 m) to reduce size.
+- Writes minified JSON to `src/map/lines.geojson` and reports size savings.

@@ -191,15 +191,17 @@ const cptmNewHint = document.getElementById("cptmNewHint") as HTMLParagraphEleme
 const hardModeHarderHint = document.getElementById("hardModeHarderHint") as HTMLParagraphElement | null;
 
 function updateCptmHintVisibility() {
-	try {
-		const seen = state.loadCptmPromptSeen();
-		const show = openedForCptmPrompt && !seen;
-		if (cptmNewHint) cptmNewHint.style.display = show ? "block" : "none";
-		if (hardModeHarderHint) hardModeHarderHint.style.display = show ? "block" : "none";
-	} catch {
-		if (cptmNewHint) cptmNewHint.style.display = openedForCptmPrompt ? "block" : "none";
-		if (hardModeHarderHint) hardModeHarderHint.style.display = openedForCptmPrompt ? "block" : "none";
-	}
+    try {
+        const seen = state.loadCptmPromptSeen();
+        // CPTM "new" hint only shows during CPTM prompt and if not seen yet
+        const showCptm = openedForCptmPrompt && !seen;
+        if (cptmNewHint) cptmNewHint.style.display = showCptm ? "block" : "none";
+        // Hard mode harder hint: only show if hard mode is enabled
+        if (hardModeHarderHint) hardModeHarderHint.style.display = hardMode ? "block" : "none";
+    } catch {
+        if (cptmNewHint) cptmNewHint.style.display = openedForCptmPrompt ? "block" : "none";
+        if (hardModeHarderHint) hardModeHarderHint.style.display = hardMode ? "block" : "none";
+    }
 }
 
 const guessInput = document.getElementById("guessInput") as HTMLInputElement;
@@ -299,22 +301,6 @@ function renderStats() {
     // Update stats dialog title to reflect mode
     if (statsTitleEl) {
         statsTitleEl.textContent = includeCPTM ? "Estatísticas (CPTM) 📊" : "Estatísticas 📊";
-        // Ensure a small mode note exists under the title (only when CPTM)
-        const noteId = "statsModeNote";
-        let noteEl = document.getElementById(noteId) as HTMLParagraphElement | null;
-        if (includeCPTM) {
-            if (!noteEl) {
-                noteEl = document.createElement("p");
-                noteEl.id = noteId;
-                noteEl.style.textAlign = "center";
-                noteEl.style.margin = "4px 0 8px";
-                noteEl.style.opacity = "0.85";
-                statsTitleEl.insertAdjacentElement("afterend", noteEl);
-            }
-            noteEl.textContent = "Estas são as estatísticas do modo atual (CPTM).";
-        } else if (noteEl) {
-            noteEl.remove();
-        }
     }
     statPlayed.textContent = String(stats.played);
 	statWin.textContent = String(stats.wins);
@@ -790,17 +776,17 @@ function initUI() {
 		});
 	}
 
-	if (statsShareBtn) {
-		statsShareBtn.addEventListener("click", async () => {
-			statsShareBtn.disabled = true;
-			try {
-				const msg = await shareResult(gameState);
-				statsShareBtn.textContent = msg;
-			} finally {
-				statsShareBtn.disabled = false;
-			}
-		});
-	}
+ if (statsShareBtn) {
+        statsShareBtn.addEventListener("click", async () => {
+            statsShareBtn.disabled = true;
+            try {
+                const msg = await shareResult(gameState);
+                statsShareBtn.textContent = msg ?? "Copiado!";
+            } finally {
+                statsShareBtn.disabled = false;
+            }
+        });
+    }
 
 	if (statsShareImgBtn) {
 		statsShareImgBtn.addEventListener("click", async () => {
@@ -828,6 +814,8 @@ function initUI() {
         hardMode = hardModeToggle.checked;
         state.saveHardMode(hardMode);
         renderMap();
+        // Update visibility of the hard mode hint based on the new state
+        updateCptmHintVisibility();
     });
 
     cptmToggle.addEventListener("change", () => {

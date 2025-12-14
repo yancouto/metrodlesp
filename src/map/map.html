@@ -32,29 +32,9 @@
     const defaultCenter = [-46.636681, -23.599162];
     let currentCenter = hasCenter ? [qLon, qLat] : defaultCenter.slice();
 
-    const map = new maplibregl.Map({
-        container: "map",
-        style: styleUrl,
-        center: currentCenter,
-        zoom: Number.isFinite(qZ) ? qZ : 17, // initial; will be overridden by fitBounds
-        pitch: 0,
-        bearing: Number.isFinite(qBearing) ? qBearing : 0,
-        interactive: false,
-        preserveDrawingBuffer: true, // needed for toDataURL()
-    });
-
-    const myGeoJSON = {
-        type: "FeatureCollection",
-        features: [
-            {type: "Feature", properties: {name: "Demo"}, geometry: {type: "Point", coordinates: [-46.6367, -23.5992]}},
-        ],
-    };
-    const dataUrl = params.get("lines");
-    const knownParam = params.get("known");
-    const knownLines = knownParam ? knownParam.split(",").map(s => s.trim()).filter(Boolean) : [];
-
-    // Helpers to compute a fixed geographic extent around a center so all screens show the same area
-    function boundsForFixedSpan(centerLon, centerLat, spanMeters = 2000) { // total width/height in meters
+    // Compute a fixed geographic extent so all devices start with the same visible area.
+    const FIXED_SPAN_METERS = 600; // total width/height in meters (kept in sync with applyFixedView)
+    function boundsForFixedSpan(centerLon, centerLat, spanMeters = FIXED_SPAN_METERS) { // total width/height in meters
         const half = spanMeters / 2;
         const metersPerDegLat = 111320; // approx
         const metersPerDegLon = Math.cos(centerLat * Math.PI / 180) * 111320;
@@ -65,10 +45,49 @@
         return [sw, ne];
     }
 
+    // Initialize the map already fitted to the fixed bounds so there is no zoom jump on load
+    const initialBounds = boundsForFixedSpan(currentCenter[0], currentCenter[1], FIXED_SPAN_METERS);
+    const map = new maplibregl.Map({
+        container: "map",
+        style: styleUrl,
+        bounds: initialBounds,
+        fitBoundsOptions: { padding: 0, animate: false },
+        pitch: 0,
+        bearing: Number.isFinite(qBearing) ? qBearing : 0,
+        interactive: false,
+        preserveDrawingBuffer: true, // needed for toDataURL()
+    });
+
+    const dataUrl = params.get("lines");
+    const knownParam = params.get("known");
+    const knownLines = knownParam ? knownParam.split(",").map(s => s.trim()).filter(Boolean) : [];
+
+    // Pre-start fetch of the overlay so it can happen in parallel with style/map load
+    const overlayPromise = (function() {
+        if (!dataUrl) return Promise.resolve(null);
+        return (async () => {
+            try {
+                const resp = await fetch(dataUrl);
+                if (!resp.ok) {
+                    console.warn("Lines overlay fetch failed", {
+                        url: dataUrl,
+                        status: resp.status,
+                        statusText: resp.statusText,
+                    });
+                    return null;
+                }
+                const geojson = await resp.json();
+                return geojson || null;
+            } catch (e) {
+                console.warn("Failed to load custom lines overlay:", e);
+                return null; // Map should continue without overlay
+            }
+        })();
+    })();
+
     function applyFixedView(center, options = {}) {
         try {
-            const span = 600; // meters: shows the same 750mx750m area on all screens
-            const b = boundsForFixedSpan(center[0], center[1], span);
+            const b = boundsForFixedSpan(center[0], center[1], FIXED_SPAN_METERS);
             map.fitBounds(b, {padding: 0, bearing: map.getBearing(), pitch: 0, animate: false, ...options});
         } catch (e) {
             // ignore
@@ -77,48 +96,35 @@
 
     // Always set up layers on load; conditionally add lines if a data URL is provided
     map.on("load", async () => {
-        // Optionally add the base lines layer if a URL is provided
-        if (dataUrl) {
-            try {
-                const resp = await fetch(dataUrl);
-                if (!resp.ok) {
-                    console.warn("Lines overlay fetch failed", {
-                        url: dataUrl,
-                        status: resp.status,
-                        statusText: resp.statusText
+        // Add the lines overlay if it was requested and successfully fetched
+        try {
+            const geojson = await overlayPromise;
+            if (geojson) {
+                try {
+                    map.addSource("custom-geojson", { type: "geojson", data: geojson });
+                    map.addLayer({
+                        id: "custom-lines",
+                        type: "line",
+                        source: "custom-geojson",
+                        filter: ["match", ["geometry-type"], ["LineString", "MultiLineString"], true, false],
+                        paint: {
+                            // Show the real line color only for known (identified) lines; others in black
+                            "line-color": [
+                                "case",
+                                ["in", ["get", "ref"], ["literal", knownLines]],
+                                ["coalesce", ["get", "colour"], ["get", "color"], "#8a8a8a"],
+                                "#000000",
+                            ],
+                            "line-width": 3,
+                            "line-opacity": 1.0,
+                        },
                     });
-                } else {
-                    const geojson = await resp.json();
-                    if (geojson) {
-                        try {
-                            map.addSource("custom-geojson", {type: "geojson", data: geojson});
-                            map.addLayer({
-                                id: "custom-lines",
-                                type: "line",
-                                source: "custom-geojson",
-                                filter: ["match", ["geometry-type"], ["LineString", "MultiLineString"], true, false],
-                                paint: {
-                                    // Show the real line color only for known (identified) lines; others in black
-                                    "line-color": [
-                                        "case",
-                                        ["in", ["get", "ref"], ["literal", knownLines]],
-                                        ["coalesce", ["get", "colour"], ["get", "color"], "#8a8a8a"],
-                                        "#000000"
-                                    ],
-                                    "line-width": 3,
-                                    "line-opacity": 1.0,
-                                },
-                            });
-                            const count = Array.isArray(geojson.features) ? geojson.features.length : 0;
-                        } catch (addErr) {
-                            console.warn("Failed to add lines overlay to map", addErr);
-                        }
-                    }
+                } catch (addErr) {
+                    console.warn("Failed to add lines overlay to map", addErr);
                 }
-            } catch (e) {
-                console.warn("Failed to load custom lines overlay:", e);
-                // Ignore fetch/parse errors; the map works without the overlay
             }
+        } catch (_) {
+            // ignore; already logged in overlayPromise
         }
 
         // Add a center-point source and circle layer to highlight the target location
