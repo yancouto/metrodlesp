@@ -199,10 +199,10 @@ function updateCptmHintVisibility() {
         const showCptm = openedForCptmPrompt && !seen;
         if (cptmNewHint) cptmNewHint.style.display = showCptm ? "block" : "none";
         // Hard mode harder hint: only show if hard mode is enabled
-        if (hardModeHarderHint) hardModeHarderHint.style.display = hardMode ? "block" : "none";
+			if (hardModeHarderHint) hardModeHarderHint.style.display = hardMode && showCptm ? "block" : "none";
     } catch {
         if (cptmNewHint) cptmNewHint.style.display = openedForCptmPrompt ? "block" : "none";
-        if (hardModeHarderHint) hardModeHarderHint.style.display = hardMode ? "block" : "none";
+			if (hardModeHarderHint) hardModeHarderHint.style.display = hardMode && openedForCptmPrompt ? "block" : "none";
     }
 }
 
@@ -590,6 +590,7 @@ function renderMap() {
 	// Determine today's solution and pass its coordinates to the embedded map
 	const solution = stationById(gameState.solutionId);
 	const isWon = gameState.status === "won";
+	const isLost = gameState.status === "lost";
 	const params = new URLSearchParams();
 	if (typeof solution.lon === "number" && typeof solution.lat === "number") {
 		params.set("lon", String(solution.lon));
@@ -608,6 +609,12 @@ function renderMap() {
 	}
 	if (hardMode && gameState.guesses.length < 4 && !isWon) {
 		params.set("bearing", String(dailyRotation));
+	}
+
+	// Easy mode: after 5 errors, allow the player to pan/zoom the map
+	const allowInteract = isWon || isLost || (!hardMode && gameState.guesses.length >= 5 && gameState.guesses.length < 6);
+	if (allowInteract) {
+		params.set("interact", "1");
 	}
 	const iframe = document.createElement("iframe");
 	// Append MapTiler key if available via Vite env (not present in tests/build output)
@@ -647,6 +654,18 @@ function renderMap() {
 			});
 			indicatorsDiv.appendChild(hidden);
 		}
+	}
+
+	// Indicator for interactive map on easy mode after 5 errors
+	if (allowInteract) {
+		const pan = document.createElement("div");
+		pan.className = "map-indicator";
+		pan.title = "Você pode arrastar e aproximar o mapa";
+		pan.textContent = "🗺️";
+		pan.addEventListener("click", () => {
+			showToast("Após 5 erros, você pode explorar o mapa.");
+		});
+		indicatorsDiv.appendChild(pan);
 	}
 }
 

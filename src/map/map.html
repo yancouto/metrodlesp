@@ -28,6 +28,7 @@
     const qZ = parseFloat(params.get("z"));
     const qBearing = parseFloat(params.get("bearing"));
     const hasCenter = Number.isFinite(qLon) && Number.isFinite(qLat);
+    const interact = params.get("interact") === "1";
     // Choose a default center around central SP if none provided
     const defaultCenter = [-46.636681, -23.599162];
     let currentCenter = hasCenter ? [qLon, qLat] : defaultCenter.slice();
@@ -54,7 +55,7 @@
         fitBoundsOptions: { padding: 0, animate: false },
         pitch: 0,
         bearing: Number.isFinite(qBearing) ? qBearing : 0,
-        interactive: false,
+        interactive: interact,
         preserveDrawingBuffer: true, // needed for toDataURL()
     });
 
@@ -162,10 +163,12 @@
         // Apply fixed view so all screens show the same geographic extent
         applyFixedView(center, {animate: false});
 
-        // Re-apply fixed view on resize to keep the same area visible
-        try {
-            window.addEventListener("resize", () => applyFixedView(currentCenter, {animate: false}));
-        } catch {
+        // Re-apply fixed view on resize only when interaction is disabled (to avoid snapping while panning)
+        if (!interact) {
+            try {
+                window.addEventListener("resize", () => applyFixedView(currentCenter, {animate: false}));
+            } catch {
+            }
         }
     });
 
