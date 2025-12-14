@@ -98,7 +98,8 @@ function isTouchDevice(): boolean {
 }
 
 async function shareResult(state: GameState): Promise<string | null> {
-    const text = logic.buildShare(state, STATIONS, LINES, DIST_FROM_SOLUTION, hardMode, includeCPTM);
+	const hardForShare = state.hardModeUsed ?? hardMode;
+	const text = logic.buildShare(state, STATIONS, LINES, DIST_FROM_SOLUTION, hardForShare, includeCPTM);
 	// Analytics: share click
 	gtag("event", "share_click", { method: "auto" });
 	// Determine if device is touch-capable (mobile/tablet). On desktop, prefer clipboard.
@@ -162,7 +163,8 @@ async function shareImgResult(state: GameState): Promise<string | null> {
 
 async function shareResultAsImage(state: GameState) {
     const container = document.getElementById("share-image-container")!;
-    container.innerHTML = logic.buildShareImageHTML(state, STATIONS, LINES, DIST_FROM_SOLUTION, hardMode, includeCPTM);
+	const hardForShare = state.hardModeUsed ?? hardMode;
+	container.innerHTML = logic.buildShareImageHTML(state, STATIONS, LINES, DIST_FROM_SOLUTION, hardForShare, includeCPTM);
 	// Add a class to enable export styles
 	const shareImageEl = container.firstElementChild as HTMLElement;
 	shareImageEl.classList.add("share-image");
@@ -813,6 +815,23 @@ function initUI() {
     hardModeToggle.addEventListener("change", () => {
         hardMode = hardModeToggle.checked;
         state.saveHardMode(hardMode);
+			// Update persisted hard mode usage per rules:
+			// - Before first guess: mirror current toggle (allow both directions)
+			// - After guesses start: allow only hard -> non-hard demotion, not non-hard -> hard
+			try {
+				const hadGuess = gameState.guesses.length > 0;
+				const prev = gameState.hardModeUsed === true;
+				if (!hadGuess) {
+					gameState.hardModeUsed = hardMode;
+				} else {
+					if (prev && !hardMode) {
+						gameState.hardModeUsed = false;
+					}
+					// if previously false and now true after starting, keep as false
+				}
+				state.saveState(gameState, includeCPTM);
+			} catch {
+			}
         renderMap();
         // Update visibility of the hard mode hint based on the new state
         updateCptmHintVisibility();

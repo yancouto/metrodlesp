@@ -6,6 +6,9 @@ export type GameState = {
 	dateKey: string;
 	guesses: string[]; // station ids
 	status: "playing" | "won" | "lost";
+	// Persist whether hard mode should be considered for sharing for this day's game/state
+	// This allows consistent share suffix even if the user toggles mid-game.
+	hardModeUsed?: boolean;
 };
 
 export type Stats = {
@@ -99,6 +102,7 @@ export function loadState(dateKey: string, stations: Station[], includeCPTM: boo
 		dateKey,
 		guesses: [],
 		status: "playing",
+		hardModeUsed: loadHardMode(),
 	};
 	saveState(init, includeCPTM);
 	return init;
