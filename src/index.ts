@@ -883,7 +883,8 @@ async function boot() {
 		gtag("event", "cptm_mode_impression", {mode: includeCPTM ? "cptm" : "metro"});
 	} catch {
 	}
-    STATIONS = await loadStations({ includeCPTM });
+	let ADJ_GRAPH;
+	[STATIONS, ADJ_GRAPH] = await Promise.all([loadStations({includeCPTM}), loadAdjacencyGraph({includeCPTM})]);
     gameState = state.loadState(todayKey, STATIONS, includeCPTM);
     stats = state.loadStats(includeCPTM);
     // For testing purposes
@@ -894,7 +895,6 @@ async function boot() {
     cptmToggle.checked = includeCPTM;
     dailyRotation = logic.getDailyRotation(todayKey);
     const solution = stationById(gameState.solutionId);
-	let ADJ_GRAPH = await loadAdjacencyGraph({includeCPTM});
     DIST_FROM_SOLUTION = bfsDistances(solution, ADJ_GRAPH);
     initUI();
     // Wire help link to open settings

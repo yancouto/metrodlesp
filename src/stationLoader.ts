@@ -151,7 +151,7 @@ function normalizeLineLabel(label: string): LineId | undefined {
 
 const stationsCache: { base: Station[] | null; cptm: Station[] | null } = {base: null, cptm: null};
 // Map each original wikidata id to its merged representative wikidata id (per mode)
-const idToRepCache: { base: Map<string, string> | null; cptm: Map<string, string> | null } = { base: null, cptm: null };
+const idToRepCache: { base: Map<string, string> | null; cptm: Map<string, string> | null } = {base: null, cptm: null};
 
 function parsePoint(s: string): { lon: number; lat: number } | null {
 	// Expected format: Point(lon lat)
@@ -183,12 +183,15 @@ function normalizeNameForCanon(n: string): string {
 	// Collapse whitespace
 	return s.replace(/\s+/g, " ").trim();
 }
+
 function startsWithArticlePT(name: string): boolean {
 	return /^(da|de|do|das|dos)\s+/i.test(name);
 }
+
 function hasTerminalPrefix(name: string): boolean {
 	return /^\s*terminal\s+intermodal\b/i.test(name);
 }
+
 function chooseRepresentative(a: Station, b: Station): Station {
 	// Prefer variant without leading article; then without Terminal Intermodal; then shorter name
 	const aArt = startsWithArticlePT(a.name);
@@ -270,13 +273,16 @@ export async function loadStations(_opts: LoadStationsOptions = {}): Promise<Sta
 		if (typeof lat !== "number" || typeof lon !== "number") {
 			for (const s of arr) {
 				if (typeof s.lat === "number" && typeof s.lon === "number") {
-					lat = s.lat; lon = s.lon; break;
+					lat = s.lat;
+					lon = s.lon;
+					break;
 				}
 			}
 		}
-		const repStation: Station = { id: rep.id, wikidataId: rep.wikidataId, name: rep.name, lines: unionLines };
+		const repStation: Station = {id: rep.id, wikidataId: rep.wikidataId, name: rep.name, lines: unionLines};
 		if (typeof lat === "number" && typeof lon === "number") {
-			repStation.lat = lat; repStation.lon = lon;
+			repStation.lat = lat;
+			repStation.lon = lon;
 		}
 		merged.push(repStation);
 		for (const s of arr) idToRep.set(s.id, rep.id);
@@ -311,13 +317,12 @@ export async function loadAdjacencyGraph(_opts: { includeCPTM?: boolean } = {}):
 		? new URL("./data/interchanges_with_cptm.csv", import.meta.url)
 		: new URL("./interchanges.csv", import.meta.url);
 	// Load raw graphs keyed by original ids
-	const rawAdjacent = await loadAdjacencyCsv(adjUrl, "station", "adjacent_station");
-	const rawInter = await loadAdjacencyCsv(interUrl, "station", "interchange_station");
+	const [rawAdjacent, rawInter] = await Promise.all([loadAdjacencyCsv(adjUrl, "station", "adjacent_station"), loadAdjacencyCsv(interUrl, "station", "interchange_station")]);
 
 	// Ensure we have the id→representative mapping for this mode
 	let idToRep = idToRepCache[cacheKey as keyof typeof idToRepCache];
 	if (!idToRep) {
-		await loadStations({ includeCPTM });
+		await loadStations({includeCPTM});
 		idToRep = idToRepCache[cacheKey as keyof typeof idToRepCache] || new Map();
 	}
 	const toRep = (id: string) => idToRep!.get(id) || id;
