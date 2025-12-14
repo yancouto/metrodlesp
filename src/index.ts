@@ -1,10 +1,10 @@
-import { bfsDistances, loadAdjacencyGraph, loadStations, Station } from "./stationLoader.js";
-import { initKeyboard } from "./keyboard.js";
-import { Line, LineId, LINES } from "./lines.js";
+import {bfsDistances, loadAdjacencyGraph, loadStations, Station} from "./stationLoader.js";
+import {initKeyboard} from "./keyboard.js";
+import {Line, LineId, LINES} from "./lines.js";
 import * as state from "./state.js";
-import { GameState, Stats } from "./state.js";
+import {GameState, Stats} from "./state.js";
 import * as logic from "./logic";
-import { normalize } from "./logic";
+import {normalize} from "./logic";
 // @ts-ignore
 import mapUrl from "./map/map.html?url";
 // @ts-ignore
@@ -184,6 +184,17 @@ let hardMode: boolean;
 let dailyRotation: number;
 let includeCPTM: boolean;
 let openedForCptmPrompt = false;
+const cptmNewHint = document.getElementById("cptmNewHint") as HTMLParagraphElement | null;
+
+function updateCptmHintVisibility() {
+	try {
+		if (!cptmNewHint) return;
+		const seen = state.loadCptmPromptSeen();
+		cptmNewHint.style.display = openedForCptmPrompt && !seen ? "block" : "none";
+	} catch {
+		if (cptmNewHint) cptmNewHint.style.display = openedForCptmPrompt ? "block" : "none";
+	}
+}
 
 const guessInput = document.getElementById("guessInput") as HTMLInputElement;
 const form = document.getElementById("guessForm") as HTMLFormElement;
@@ -705,6 +716,7 @@ function initUI() {
     hardModeToggle.checked = hardMode;
     cptmToggle.checked = includeCPTM;
     openedForCptmPrompt = false;
+		updateCptmHintVisibility();
     settingsDialog.showModal();
   });
   settingsClose.addEventListener("click", () => {
@@ -755,6 +767,8 @@ function initUI() {
         // Open settings to let the user enable hard mode
         hardModeToggle.checked = hardMode;
         cptmToggle.checked = includeCPTM;
+			openedForCptmPrompt = false;
+			updateCptmHintVisibility();
         settingsDialog.showModal();
     });
     hardModeToggle.addEventListener("change", () => {
@@ -790,7 +804,7 @@ async function boot() {
     cptmToggle.checked = includeCPTM;
     dailyRotation = logic.getDailyRotation(todayKey);
     const solution = stationById(gameState.solutionId);
-    let ADJ_GRAPH = await loadAdjacencyGraph();
+	let ADJ_GRAPH = await loadAdjacencyGraph({includeCPTM});
     DIST_FROM_SOLUTION = bfsDistances(solution, ADJ_GRAPH);
     initUI();
     // Wire help link to open settings
@@ -801,6 +815,7 @@ async function boot() {
             hardModeToggle.checked = hardMode;
             cptmToggle.checked = includeCPTM;
             openedForCptmPrompt = false;
+					updateCptmHintVisibility();
             settingsDialog.showModal();
         });
     }
@@ -823,6 +838,7 @@ async function boot() {
             hardModeToggle.checked = hardMode;
             cptmToggle.checked = includeCPTM;
             openedForCptmPrompt = true;
+					updateCptmHintVisibility();
             settingsDialog.showModal();
         }
     } catch {}

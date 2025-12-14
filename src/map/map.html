@@ -19,7 +19,7 @@
 	const WIDTH = 512,
 		HEIGHT = 512; // or 640x640
 	const MAPTILER_KEY = new URLSearchParams(location.search).get("k");
-	const styleUrl = `https://api.maptiler.com/maps/basic/style.json?key=${MAPTILER_KEY}`;
+    const styleUrl = `https://api.maptiler.com/maps/streets/style.json?key=${MAPTILER_KEY}`;
 
 	// Read center from URL query params if provided
 	const params = new URLSearchParams(location.search);
@@ -46,58 +46,67 @@
 			{ type: "Feature", properties: { name: "Demo" }, geometry: { type: "Point", coordinates: [-46.6367, -23.5992] } },
 		],
 	};
-	const dataUrl = params.get("lines");
-	const geojson = fetch(dataUrl)
-		.then(r => r.json())
-		.then(geojson =>
-			map.on("load", () => {
-				// Base lines layer
-				map.addSource("custom-geojson", { type: "geojson", data: geojson });
-				map.addLayer({
-					id: "custom-lines",
-					type: "line",
-					source: "custom-geojson",
-					filter: ["==", ["geometry-type"], "LineString"], // or ['in', ['geometry-type'], ['literal', ['LineString','MultiLineString']]]
-					paint: {
-						"line-color": "#8a8a8a",
-						"line-width": 3,
-						"line-opacity": 1.0,
-					},
-				});
+    const dataUrl = params.get("lines");
 
-				// Add a center-point source and circle layer to highlight the target location
-				map.addSource("center-point", {
-					type: "geojson",
-					data: {
-						type: "FeatureCollection",
-						features: [],
-					},
-				});
-				map.addLayer({
-					id: "center-circle",
-					type: "circle",
-					source: "center-point",
-					paint: {
-						// semi-transparent fill with a bright white stroke so it stands out
-						"circle-radius": 8,
-						"circle-color": "rgba(0,0,0,0.67)",
-						"circle-stroke-color": "#fff",
-						"circle-stroke-width": 2,
-					},
-				});
+    // Always set up layers on load; conditionally add lines if a data URL is provided
+    map.on("load", async () => {
+        // Optionally add the base lines layer if a URL is provided
+        if (dataUrl) {
+            try {
+                const resp = await fetch(dataUrl);
+                if (resp.ok) {
+                    const geojson = await resp.json();
+                    map.addSource("custom-geojson", {type: "geojson", data: geojson});
+                    map.addLayer({
+                        id: "custom-lines",
+                        type: "line",
+                        source: "custom-geojson",
+                        filter: ["==", ["geometry-type"], "LineString"],
+                        paint: {
+                            "line-color": "#8a8a8a",
+                            "line-width": 3,
+                            "line-opacity": 1.0,
+                        },
+                    });
+                }
+            } catch (e) {
+                console.warn("Failed to load custom lines overlay:", e);
+                // Ignore fetch/parse errors; the map works without the overlay
+            }
+        }
 
-				// Initialize the center circle with provided query params or current center
-				const has = Number.isFinite(qLon) && Number.isFinite(qLat);
-				const center = has ? [qLon, qLat] : map.getCenter().toArray();
-				const src = map.getSource("center-point");
-				if (src) {
-					src.setData({
-						type: "FeatureCollection",
-						features: [{ type: "Feature", properties: {}, geometry: { type: "Point", coordinates: center } }],
-					});
-				}
-			}),
-		);
+        // Add a center-point source and circle layer to highlight the target location
+        map.addSource("center-point", {
+            type: "geojson",
+            data: {
+                type: "FeatureCollection",
+                features: [],
+            },
+        });
+        map.addLayer({
+            id: "center-circle",
+            type: "circle",
+            source: "center-point",
+            paint: {
+                // semi-transparent fill with a bright white stroke so it stands out
+                "circle-radius": 8,
+                "circle-color": "rgba(0,0,0,0.67)",
+                "circle-stroke-color": "#fff",
+                "circle-stroke-width": 2,
+            },
+        });
+
+        // Initialize the center circle with provided query params or current center
+        const has = Number.isFinite(qLon) && Number.isFinite(qLat);
+        const center = has ? [qLon, qLat] : map.getCenter().toArray();
+        const src = map.getSource("center-point");
+        if (src) {
+            src.setData({
+                type: "FeatureCollection",
+                features: [{type: "Feature", properties: {}, geometry: {type: "Point", coordinates: center}}],
+            });
+        }
+    });
 
 	function hideNames() {
 		const style = map.getStyle();

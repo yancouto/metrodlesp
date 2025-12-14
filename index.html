@@ -69,7 +69,7 @@
 		<main class="container">
 			<section class="map">
 				<div id="mapImage" class="map-image" role="img" aria-label="Mapa da estação do dia (sem nomes)">
-					<div class="placeholder">Mapa da estação (placeholder)</div>
+					<div class="placeholder">Mapa da estação</div>
 				</div>
 				<div id="map-indicators" class="map-indicators"></div>
 				<div id="suggestions" class="suggestions" aria-live="polite"></div>
@@ -179,8 +179,12 @@
                 </div>
 				<br>
                 <div>
-                    <p style="margin: 12px 0 6px 0"><strong>🚆 Estações da CPTM</strong></p>
-                    <p style="margin: 0 0 8px 0; opacity: 0.85; font-size: 0.95em">
+					<p id="cptmNewHint"
+					   style="display: none; margin: 0 0 8px 0; font-size: 0.95em; background: #0e3c87; color: #ccc; padding: 8px; border-radius: 6px;">
+						Novo! Agora você pode incluir as estações da <strong>CPTM</strong> no Metrodle. Experimente 👇
+					</p>
+					<p style="margin: 12px 0 6px 0"><strong>🚆 Estações da CPTM</strong></p>
+					<p style="margin: 0 0 8px 0; opacity: 0.85; font-size: 0.95em">
                         Inclui as estações da CPTM (trens) nas sugestões e na seleção diária.
                     </p>
                     <label class="toggle-switch">

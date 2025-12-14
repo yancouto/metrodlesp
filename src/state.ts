@@ -1,5 +1,5 @@
-import type { Station } from "./stationLoader.js";
-import { pickDailyStation } from "./logic.js";
+import type {Station} from "./stationLoader.js";
+import {pickDailyStation} from "./logic.js";
 
 export type GameState = {
 	solutionId: string;
@@ -83,7 +83,7 @@ export function loadState(dateKey: string, stations: Station[], includeCPTM: boo
 		}
 	}
 	const solution = pickDailyStation(dateKey, stations);
-	console.log(solution);
+	if ((import.meta as any).env?.DEV) console.log('DEV', solution);
 	const key = includeCPTM ? STORAGE_KEY_CPTM : STORAGE_KEY;
 	const raw = localStorage.getItem(key);
 	if (raw) {

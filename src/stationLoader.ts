@@ -18,44 +18,75 @@ ORDER BY (?stationLabel)
 
 # São Paulo Metro station adjacencies
 SELECT DISTINCT ?station ?adjacent_station WHERE {
-  ?station wdt:P31 wd:Q928830.
+  ?station wdt:P31/wdt:P279* wd:Q928830; # station is metro station
+    wdt:P16 wd:Q483343; # is in SP Metro
+    wdt:P5817 wd:Q55654238; # is in use
+    p:P197 ?adjacent_station_prop. # adjacent statement
+  ?adjacent_station_prop ps:P197 ?adjacent_station; # adjacent station
+    (pq:P81|pq:P1192) ?connecting_line. # through this line
+  ?connecting_line wdt:P16 wd:Q483343; # connecting line from SP metro
+    wdt:P5817 wd:Q55654238. # and in use
+  ?adjacent_station wdt:P5817 wd:Q55654238. # adjacent line in use
   SERVICE wikibase:label { bd:serviceParam wikibase:language "pt,en". }
-  ?station wdt:P16 wd:Q483343;
-    wdt:P5817 wd:Q55654238;
-    wdt:P197 ?adjacent_station.
-  ?adjacent_station wdt:P81 ?connecting_line.
-  # Only get lines from metro
-  ?connecting_line wdt:P16 wd:Q483343.
-  ?adjacent_station wdt:P5817 wd:Q55654238.
 }
 ORDER BY ?station ?adjacent_station
 
 # São Paulo Metro station interchanges
 SELECT ?station ?interchange_station WHERE {
-  ?station wdt:P31 wd:Q928830.
+  ?station wdt:P31/wdt:P279* wd:Q928830; # is a subway station
+    wdt:P16 wd:Q483343; # in SP subway
+    wdt:P5817 wd:Q55654238; # in use
+    wdt:P833 ?interchange_station. # interchanges with this
+  ?interchange_station wdt:P31/wdt:P279* wd:Q928830; # is a subway station
+    wdt:P16 wd:Q483343; # in SP subway
+    wdt:P5817 wd:Q55654238; # in use
   SERVICE wikibase:label { bd:serviceParam wikibase:language "pt,en". }
-  ?station wdt:P16 wd:Q483343;
-    wdt:P5817 wd:Q55654238;
-    wdt:P833 ?interchange_station.
-  ?interchange_station wdt:P31 wd:Q928830;
-    wdt:P16 wd:Q483343;
-    wdt:P5817 wd:Q55654238;
 }
 ORDER BY (?station)
 
-# CPTM stations
-
-SELECT ?station ?connecting_line ?connecting_lineLabel ?coordinate_location ?station_code ?stationLabel WHERE {
-  ?station wdt:P16 wd:Q110914375; # its transport network is São Paulo Metropolitan Trains
-           wdt:P31 wd:Q55488; # station is railway station
+# All stations
+SELECT DISTINCT ?station ?connecting_line ?connecting_lineLabel ?coordinate_location ?stationLabel WHERE {
+  VALUES ?network { wd:Q483343 wd:Q110914375 }
+  ?station wdt:P16 ?network; # its transport network is São Paulo Metropolitan Trains
+           wdt:P31/wdt:P279* wd:Q55488; # station is railway station
            wdt:P5817 wd:Q55654238; # it is in use
-           wdt:P1192 ?connecting_line.
+           (wdt:P1192|wdt:P81) ?connecting_line.
   OPTIONAL { ?station wdt:P625 ?coordinate_location. }
-  OPTIONAL { ?station wdt:P296 ?station_code. }
   ?connecting_line wdt:P5817 wd:Q55654238. # line is in use
   SERVICE wikibase:label { bd:serviceParam wikibase:language "pt,en". }
 }
 ORDER BY (?stationLabel)
+
+# All adjacencies
+SELECT DISTINCT ?station ?adjacent_station WHERE {
+  VALUES ?network { wd:Q483343 wd:Q110914375 }
+  ?station wdt:P31/wdt:P279* wd:Q55488; # station is railway station
+    wdt:P16 ?network; # in CPTM+Metro
+    wdt:P5817 wd:Q55654238; # in use
+    p:P197 ?adjacent_station_prop. # adjacent station property
+  ?adjacent_station_prop ps:P197 ?adjacent_station; # the adjacent station
+    (pq:P81|pq:P1192) ?connecting_line. # the connecting line
+  ?adjacent_station wdt:P5817 wd:Q55654238. # adjacent station in use
+  ?connecting_line wdt:P16 ?network; # connecting line in CPTM
+    wdt:P5817 wd:Q55654238. # and in use
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "pt,en". }
+}
+ORDER BY ?station ?adjacent_station
+
+# All interchanges: No new one?
+SELECT ?station ?interchange_station WHERE {
+  VALUES ?network { wd:Q483343 wd:Q110914375 }
+  ?station wdt:P31/wdt:P279* wd:Q55488; # is a subway station
+    wdt:P16 ?network; # in SP subway
+    wdt:P5817 wd:Q55654238; # in use
+    wdt:P833 ?interchange_station. # interchanges with this
+  ?interchange_station wdt:P31/wdt:P279* wd:Q55488; # is a subway station
+    wdt:P16 ?network; # in SP subway/CPTM
+    wdt:P5817 wd:Q55654238; # in use
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "pt,en". }
+}
+ORDER BY (?station)
+
 
 */
 
@@ -102,7 +133,7 @@ function slugify(ptName: string): string {
 		.replace(/(^-|-$)/g, "");
 }
 
-const IGNORED_LINES = new Set(["Ramal de São Paulo"]);
+const IGNORED_LINES = new Set(["Ramal de São Paulo", "Expresso Turístico", "Expresso Linha 10"]);
 
 function normalizeLineLabel(label: string): LineId | undefined {
 	const raw = label
@@ -116,7 +147,7 @@ function normalizeLineLabel(label: string): LineId | undefined {
 	throw new Error(`Unknown line: ${raw}`);
 }
 
-let stationsCache: Station[] | null = null;
+const stationsCache: { base: Station[] | null; cptm: Station[] | null } = {base: null, cptm: null};
 
 function parsePoint(s: string): { lon: number; lat: number } | null {
 	// Expected format: Point(lon lat)
@@ -137,8 +168,14 @@ export type LoadStationsOptions = {
 };
 
 export async function loadStations(_opts: LoadStationsOptions = {}): Promise<Station[]> {
-    if (stationsCache) return stationsCache;
-    const url = new URL("./stations.csv", import.meta.url);
+	const includeCPTM = !!_opts.includeCPTM;
+	const cacheKey = includeCPTM ? "cptm" : "base";
+	const cached = stationsCache[cacheKey as keyof typeof stationsCache];
+	if (cached) return cached as Station[];
+
+	const url = includeCPTM
+		? new URL("./data/stations_with_cptm.csv", import.meta.url)
+		: new URL("./stations.csv", import.meta.url);
     const res = await fetch(url as any, { cache: "no-cache" });
     if (!res.ok) throw new Error("Falha ao carregar stations.csv");
     const text = await res.text();
@@ -178,9 +215,9 @@ export async function loadStations(_opts: LoadStationsOptions = {}): Promise<Sta
 			}
 		}
 	}
-    stationsCache = Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
-    // Note: When includeCPTM is enabled, future implementation will merge CPTM data here.
-    return stationsCache;
+	const result = Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
+	(stationsCache as any)[cacheKey] = result;
+	return result;
 }
 
 // Based on wikidata ids
@@ -189,19 +226,26 @@ export type AdjacencyGraph = {
 	adjacent: Map<string, Set<string>>;
 	interchange: Map<string, Set<string>>;
 };
-let adjCache: AdjacencyGraph | null = null;
+const adjCache: { base: AdjacencyGraph | null; cptm: AdjacencyGraph | null } = {base: null, cptm: null};
 
-export async function loadAdjacencyGraph(): Promise<AdjacencyGraph> {
-	if (adjCache === null) {
-		const adjUrl = new URL("./adjacencies.csv", import.meta.url);
-		const interUrl = new URL("./interchanges.csv", import.meta.url);
-		adjCache = {
-			adjacent: await loadAdjacencyCsv(adjUrl, "station", "adjacent_station"),
-			interchange: await loadAdjacencyCsv(interUrl, "station", "interchange_station"),
-		};
-	}
+export async function loadAdjacencyGraph(_opts: { includeCPTM?: boolean } = {}): Promise<AdjacencyGraph> {
+	const includeCPTM = !!_opts.includeCPTM;
+	const cacheKey = includeCPTM ? "cptm" : "base";
+	const cached = adjCache[cacheKey as keyof typeof adjCache];
+	if (cached) return cached as AdjacencyGraph;
 
-	return adjCache;
+	const adjUrl = includeCPTM
+		? new URL("./data/adjacencies_with_cptm.csv", import.meta.url)
+		: new URL("./adjacencies.csv", import.meta.url);
+	const interUrl = includeCPTM
+		? new URL("./data/interchanges_with_cptm.csv", import.meta.url)
+		: new URL("./interchanges.csv", import.meta.url);
+	const built: AdjacencyGraph = {
+		adjacent: await loadAdjacencyCsv(adjUrl, "station", "adjacent_station"),
+		interchange: await loadAdjacencyCsv(interUrl, "station", "interchange_station"),
+	};
+	(adjCache as any)[cacheKey] = built;
+	return built;
 }
 
 export async function loadAdjacencyCsv(url: URL, a: string, b: string): Promise<Map<string, Set<string>>> {
