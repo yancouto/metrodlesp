@@ -3,52 +3,77 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <style>
-	html,
-	body,
-	#map {
-		margin: 0;
-		height: 100%;
-		width: 100%;
-		background: #111;
-	}
+    html,
+    body,
+    #map {
+        margin: 0;
+        height: 100%;
+        width: 100%;
+        background: #111;
+    }
 </style>
 <link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet" />
 <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
 <div id="map"></div>
 <script>
-	const WIDTH = 512,
-		HEIGHT = 512; // or 640x6401
-	const MAPTILER_KEY = new URLSearchParams(location.search).get("k");
+    const WIDTH = 512,
+        HEIGHT = 512; // or 640x6401
+    const MAPTILER_KEY = new URLSearchParams(location.search).get("k");
     const styleUrl = `https://api.maptiler.com/maps/streets/style.json?key=${MAPTILER_KEY}`;
 
-	// Read center from URL query params if provided
-	const params = new URLSearchParams(location.search);
-	const qLon = parseFloat(params.get("lon"));
-	const qLat = parseFloat(params.get("lat"));
-	const qZ = parseFloat(params.get("z"));
-	const qBearing = parseFloat(params.get("bearing"));
-	const hasCenter = Number.isFinite(qLon) && Number.isFinite(qLat);
+    // Read center from URL query params if provided
+    const params = new URLSearchParams(location.search);
+    const qLon = parseFloat(params.get("lon"));
+    const qLat = parseFloat(params.get("lat"));
+    const qZ = parseFloat(params.get("z"));
+    const qBearing = parseFloat(params.get("bearing"));
+    const hasCenter = Number.isFinite(qLon) && Number.isFinite(qLat);
+    // Choose a default center around central SP if none provided
+    const defaultCenter = [-46.636681, -23.599162];
+    let currentCenter = hasCenter ? [qLon, qLat] : defaultCenter.slice();
 
-	const map = new maplibregl.Map({
-		container: "map",
-		style: styleUrl,
-		center: hasCenter ? [qLon, qLat] : [-46.636681, -23.599162],
-		zoom: Number.isFinite(qZ) ? qZ : 17,
-		pitch: 0,
-		bearing: Number.isFinite(qBearing) ? qBearing : 0,
-		interactive: false,
-		preserveDrawingBuffer: true, // needed for toDataURL()
-	});
+    const map = new maplibregl.Map({
+        container: "map",
+        style: styleUrl,
+        center: currentCenter,
+        zoom: Number.isFinite(qZ) ? qZ : 17, // initial; will be overridden by fitBounds
+        pitch: 0,
+        bearing: Number.isFinite(qBearing) ? qBearing : 0,
+        interactive: false,
+        preserveDrawingBuffer: true, // needed for toDataURL()
+    });
 
-	const myGeoJSON = {
-		type: "FeatureCollection",
-		features: [
-			{ type: "Feature", properties: { name: "Demo" }, geometry: { type: "Point", coordinates: [-46.6367, -23.5992] } },
-		],
-	};
+    const myGeoJSON = {
+        type: "FeatureCollection",
+        features: [
+            {type: "Feature", properties: {name: "Demo"}, geometry: {type: "Point", coordinates: [-46.6367, -23.5992]}},
+        ],
+    };
     const dataUrl = params.get("lines");
     const knownParam = params.get("known");
     const knownLines = knownParam ? knownParam.split(",").map(s => s.trim()).filter(Boolean) : [];
+
+    // Helpers to compute a fixed geographic extent around a center so all screens show the same area
+    function boundsForFixedSpan(centerLon, centerLat, spanMeters = 2000) { // total width/height in meters
+        const half = spanMeters / 2;
+        const metersPerDegLat = 111320; // approx
+        const metersPerDegLon = Math.cos(centerLat * Math.PI / 180) * 111320;
+        const dLat = half / metersPerDegLat;
+        const dLon = half / metersPerDegLon;
+        const sw = [centerLon - dLon, centerLat - dLat];
+        const ne = [centerLon + dLon, centerLat + dLat];
+        return [sw, ne];
+    }
+
+    function applyFixedView(center, options = {}) {
+        try {
+            const span = 600; // meters: shows the same 750mx750m area on all screens
+            const b = boundsForFixedSpan(center[0], center[1], span);
+            map.fitBounds(b, {padding: 0, bearing: map.getBearing(), pitch: 0, animate: false, ...options});
+        } catch (e) {
+            // ignore
+        }
+    }
 
     // Always set up layers on load; conditionally add lines if a data URL is provided
     map.on("load", async () => {
@@ -57,7 +82,11 @@
             try {
                 const resp = await fetch(dataUrl);
                 if (!resp.ok) {
-                    console.warn("Lines overlay fetch failed", { url: dataUrl, status: resp.status, statusText: resp.statusText });
+                    console.warn("Lines overlay fetch failed", {
+                        url: dataUrl,
+                        status: resp.status,
+                        statusText: resp.statusText
+                    });
                 } else {
                     const geojson = await resp.json();
                     if (geojson) {
@@ -73,7 +102,7 @@
                                     "line-color": [
                                         "case",
                                         ["in", ["get", "ref"], ["literal", knownLines]],
-                                        ["coalesce", ["get","colour"], ["get","color"], "#8a8a8a"],
+                                        ["coalesce", ["get", "colour"], ["get", "color"], "#8a8a8a"],
                                         "#000000"
                                     ],
                                     "line-width": 3,
@@ -116,6 +145,7 @@
         // Initialize the center circle with provided query params or current center
         const has = Number.isFinite(qLon) && Number.isFinite(qLat);
         const center = has ? [qLon, qLat] : map.getCenter().toArray();
+        currentCenter = center.slice();
         const src = map.getSource("center-point");
         if (src) {
             src.setData({
@@ -123,34 +153,44 @@
                 features: [{type: "Feature", properties: {}, geometry: {type: "Point", coordinates: center}}],
             });
         }
+        // Apply fixed view so all screens show the same geographic extent
+        applyFixedView(center, {animate: false});
+
+        // Re-apply fixed view on resize to keep the same area visible
+        try {
+            window.addEventListener("resize", () => applyFixedView(currentCenter, {animate: false}));
+        } catch {
+        }
     });
 
-	function hideNames() {
-		const style = map.getStyle();
-		for (const layer of style.layers) {
-			// Hide all text/icons
-			if (layer.type === "symbol") map.setLayoutProperty(layer.id, "visibility", "none");
-		}
-	}
+    function hideNames() {
+        const style = map.getStyle();
+        for (const layer of style.layers) {
+            // Hide all text/icons
+            if (layer.type === "symbol") map.setLayoutProperty(layer.id, "visibility", "none");
+        }
+    }
 
-	map.on("styledata", () => {
-		hideNames();
-	});
+    map.on("styledata", () => {
+        hideNames();
+    });
 
-	window.renderCentered = async function (lon, lat, zoom = 15) {
-		return new Promise(resolve => {
-			map.once("idle", () => {
-				resolve(map.getCanvas().toDataURL("image/png"));
-			});
-			// Update center circle position if the layer/source exist
-			const src = map.getSource && map.getSource("center-point");
-			if (src && src.setData) {
-				src.setData({
-					type: "FeatureCollection",
-					features: [{ type: "Feature", properties: {}, geometry: { type: "Point", coordinates: [lon, lat] } }],
-				});
-			}
-			map.jumpTo({ center: [lon, lat], zoom });
-		});
-	};
+    window.renderCentered = async function (lon, lat, zoom = 15) {
+        return new Promise(resolve => {
+            map.once("idle", () => {
+                resolve(map.getCanvas().toDataURL("image/png"));
+            });
+            // Update center circle position if the layer/source exist
+            const src = map.getSource && map.getSource("center-point");
+            currentCenter = [lon, lat];
+            if (src && src.setData) {
+                src.setData({
+                    type: "FeatureCollection",
+                    features: [{type: "Feature", properties: {}, geometry: {type: "Point", coordinates: [lon, lat]}}],
+                });
+            }
+            // Apply fixed view to ensure consistent area across devices, ignore zoom param
+            applyFixedView(currentCenter, {animate: false});
+        });
+    };
 </script>

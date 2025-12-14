@@ -65,11 +65,7 @@ body {
 	justify-content: center;
 }
 
-.container {
-	max-width: 720px;
-	margin: 0 auto;
-	padding: 16px;
-}
+/* Container: single canonical rule is defined later (search for second .container) */
 
 .map {
 	margin: 8px 0 12px;
@@ -77,7 +73,7 @@ body {
 }
 .map-image {
 	width: 100%;
-	aspect-ratio: 1/1;
+	aspect-ratio: 16/9; /* enforce perfect square */
 	background: #111;
 	border: 1px solid #222;
 	border-radius: 8px;
@@ -85,17 +81,18 @@ body {
 	align-items: center;
 	justify-content: center;
 	overflow: hidden;
-	max-height: 32vh;
+	/* Important: do not cap height, let aspect-ratio define it */
 	height: auto;
+	position: relative; /* allow overlays to position inside the square */
 }
-.map-indicators {
-	position: absolute;
-	top: 8px;
-	right: 8px;
-	display: flex;
-	gap: 4px;
-	z-index: 10;
+
+.map-image iframe {
+	display: block;
+	width: 100%;
+	height: 100%;
 }
+
+/* Use #map-indicators below for positioning to avoid duplicate rules */
 .map-indicator {
 	background: rgba(0, 0, 0, 0.5);
 	color: #fff;
@@ -314,12 +311,15 @@ body {
 	gap: 6px;
 }
 
-/* Suggestions overlay over the map */
-.map-image {
-	position: relative;
+/* Indicators overlay positioning within the square */
+#map-indicators {
+	position: absolute;
+	top: 8px;
+	right: 8px;
 }
-/* Suggestions overlay bounded to the map area */
-.suggestions {
+
+/* Suggestions overlay bounded to the map area (scoped to the map section) */
+.map .suggestions {
 	display: none;
 	position: absolute;
 	top: 8px;
@@ -327,10 +327,11 @@ body {
 	right: 8px;
 	bottom: 8px;
 	overflow: auto;
-	z-index: 20;
+	z-index: 15;
 	padding: 0;
 }
-.suggestions:empty {
+
+.map .suggestions:empty {
 	display: none;
 }
 
@@ -526,11 +527,6 @@ button {
 	border: 0;
 }
 
-@media (min-width: 700px) {
-	.map-image {
-		aspect-ratio: 16/9;
-	}
-}
 
 :root {
 	--kb-h: 192px; /* virtual keyboard height reservation */
@@ -547,6 +543,11 @@ button {
 
 /* Layout adjustments to keep input and keyboard always visible */
 .container {
+	/* sizing */
+	max-width: 720px;
+	margin: 0 auto;
+	padding: 16px;
+	/* layout for sticky input + fixed keyboard */
 	display: flex;
 	flex-direction: column;
 	min-height: 100dvh; /* account for mobile dynamic viewport */
@@ -569,18 +570,9 @@ button {
 	z-index: 25;
 }
 
-/* Further compact the map on short screens to save space for input + keyboard */
-@media (max-height: 700px) {
-	.map-image {
-		max-height: 26vh;
-	}
-}
+/* (Removed max-height caps for .map-image to preserve true square on all screens) */
 
 @media (max-height: 600px) {
-	.map-image {
-		max-height: 22vh;
-	}
-
 	.guess {
 		padding: 6px;
 	}
