@@ -801,3 +801,24 @@ button:disabled {
 	font-size: 0.9rem;
 	color: #aaa;
 }
+
+.sponsor-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	padding: 6px 12px;
+	background-color: #21262d;
+	color: #c9d1d9;
+	border: 1px solid rgba(240, 246, 252, 0.1);
+	border-radius: 6px;
+	font-size: 14px;
+	font-weight: 500;
+	text-decoration: none;
+	cursor: pointer;
+	transition: background-color 0.2s, border-color 0.2s;
+}
+.sponsor-btn:hover {
+	background-color: #30363d;
+	border-color: #8b949e;
+}
+

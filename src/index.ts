@@ -234,6 +234,7 @@ const helpDialog = document.getElementById("helpDialog") as HTMLDialogElement;
 const helpBtn = document.getElementById("helpBtn") as HTMLButtonElement;
 const helpClose = document.getElementById("helpClose") as HTMLButtonElement;
 const openSettingsFromHelp = document.getElementById("openSettingsFromHelp") as HTMLAnchorElement | null;
+const openAboutFromHelp = document.getElementById("openAboutFromHelp") as HTMLAnchorElement | null;
 const statsDialog = document.getElementById("statsDialog") as HTMLDialogElement;
 const statsTitleEl = statsDialog.querySelector("h2") as HTMLHeadingElement | null;
 const settingsDialog = document.getElementById("settingsDialog") as HTMLDialogElement;
@@ -943,6 +944,13 @@ async function boot() {
 			openedForCptmPrompt = false;
 			updateCptmHintVisibility();
 			settingsDialog.showModal();
+		});
+	}
+	if (openAboutFromHelp) {
+		openAboutFromHelp.addEventListener("click", e => {
+			e.preventDefault();
+			helpDialog.close();
+			aboutDialog.showModal();
 		});
 	}
 
