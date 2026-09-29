@@ -19,13 +19,13 @@ ORDER BY (?stationLabel)
 # São Paulo Metro station adjacencies
 SELECT DISTINCT ?station ?adjacent_station WHERE {
   ?station wdt:P31/wdt:P279* wd:Q55488; # station is metro station
-    wdt:P16 wd:Q483343; # is in SP Metro
-    wdt:P5817 wd:Q55654238; # is in use
-    p:P197 ?adjacent_station_prop. # adjacent statement
+	wdt:P16 wd:Q483343; # is in SP Metro
+	wdt:P5817 wd:Q55654238; # is in use
+	p:P197 ?adjacent_station_prop. # adjacent statement
   ?adjacent_station_prop ps:P197 ?adjacent_station; # adjacent station
-    (pq:P81|pq:P1192) ?connecting_line. # through this line
+	(pq:P81|pq:P1192) ?connecting_line. # through this line
   ?connecting_line wdt:P16 wd:Q483343; # connecting line from SP metro
-    wdt:P5817 wd:Q55654238. # and in use
+	wdt:P5817 wd:Q55654238. # and in use
   ?adjacent_station wdt:P5817 wd:Q55654238. # adjacent line in use
   SERVICE wikibase:label { bd:serviceParam wikibase:language "pt,en". }
 }
@@ -34,12 +34,12 @@ ORDER BY ?station ?adjacent_station
 # São Paulo Metro station interchanges
 SELECT ?station ?interchange_station WHERE {
   ?station wdt:P31/wdt:P279* wd:Q55488; # is a subway station
-    wdt:P16 wd:Q483343; # in SP subway
-    wdt:P5817 wd:Q55654238; # in use
-    wdt:P833 ?interchange_station. # interchanges with this
+	wdt:P16 wd:Q483343; # in SP subway
+	wdt:P5817 wd:Q55654238; # in use
+	wdt:P833 ?interchange_station. # interchanges with this
   ?interchange_station wdt:P31/wdt:P279* wd:Q55488; # is a subway station
-    wdt:P16 wd:Q483343; # in SP subway
-    wdt:P5817 wd:Q55654238; # in use
+	wdt:P16 wd:Q483343; # in SP subway
+	wdt:P5817 wd:Q55654238; # in use
   SERVICE wikibase:label { bd:serviceParam wikibase:language "pt,en". }
 }
 ORDER BY (?station)
@@ -48,9 +48,9 @@ ORDER BY (?station)
 SELECT DISTINCT ?station ?connecting_line ?connecting_lineLabel ?coordinate_location ?stationLabel WHERE {
   VALUES ?network { wd:Q483343 wd:Q110914375 }
   ?station wdt:P16 ?network; # its transport network is São Paulo Metropolitan Trains
-           wdt:P31/wdt:P279* wd:Q55488; # station is railway station
-           wdt:P5817 wd:Q55654238; # it is in use
-           (wdt:P1192|wdt:P81) ?connecting_line.
+		   wdt:P31/wdt:P279* wd:Q55488; # station is railway station
+		   wdt:P5817 wd:Q55654238; # it is in use
+		   (wdt:P1192|wdt:P81) ?connecting_line.
   OPTIONAL { ?station wdt:P625 ?coordinate_location. }
   ?connecting_line wdt:P5817 wd:Q55654238. # line is in use
   FILTER(?connecting_line != wd:Q10278819) # ignore Expresso Turistico
@@ -64,14 +64,14 @@ SELECT DISTINCT ?station ?adjacent_station WHERE {
   VALUES ?network { wd:Q483343 wd:Q110914375 }
   VALUES ?network2 { wd:Q483343 wd:Q110914375 }
   ?station wdt:P31/wdt:P279* wd:Q55488; # station is railway station
-    wdt:P16 ?network; # in CPTM+Metro
-    wdt:P5817 wd:Q55654238; # in use
-    p:P197 ?adjacent_station_prop. # adjacent station property
+	wdt:P16 ?network; # in CPTM+Metro
+	wdt:P5817 wd:Q55654238; # in use
+	p:P197 ?adjacent_station_prop. # adjacent station property
   ?adjacent_station_prop ps:P197 ?adjacent_station; # the adjacent station
-    (pq:P81|pq:P1192) ?connecting_line. # the connecting line
+	(pq:P81|pq:P1192) ?connecting_line. # the connecting line
   ?adjacent_station wdt:P5817 wd:Q55654238. # adjacent station in use
   ?connecting_line wdt:P16 ?network2; # connecting line in CPTM
-    wdt:P5817 wd:Q55654238. # and in use
+	wdt:P5817 wd:Q55654238. # and in use
   FILTER(?connecting_line != wd:Q10278819) # ignore Expresso Turistico
   FILTER(?connecting_line != wd:Q10278789) # ignore Expresso Aeroporto
   SERVICE wikibase:label { bd:serviceParam wikibase:language "pt,en". }
@@ -83,12 +83,12 @@ SELECT ?station ?interchange_station WHERE {
   VALUES ?network { wd:Q483343 wd:Q110914375 }
   VALUES ?network2 { wd:Q483343 wd:Q110914375 }
   ?station wdt:P31/wdt:P279* wd:Q55488; # is a subway station
-    wdt:P16 ?network; # in SP subway
-    wdt:P5817 wd:Q55654238; # in use
-    wdt:P833 ?interchange_station. # interchanges with this
+	wdt:P16 ?network; # in SP subway
+	wdt:P5817 wd:Q55654238; # in use
+	wdt:P833 ?interchange_station. # interchanges with this
   ?interchange_station wdt:P31/wdt:P279* wd:Q55488; # is a subway station
-    wdt:P16 ?network2; # in SP subway/CPTM
-    wdt:P5817 wd:Q55654238; # in use
+	wdt:P16 ?network2; # in SP subway/CPTM
+	wdt:P5817 wd:Q55654238; # in use
   SERVICE wikibase:label { bd:serviceParam wikibase:language "pt,en". }
 }
 ORDER BY (?station)
@@ -139,7 +139,7 @@ function slugify(ptName: string): string {
 		.replace(/(^-|-$)/g, "");
 }
 
-const IGNORED_LINES = new Set(["Ramal de São Paulo", "Expresso Turístico", "Expresso Linha 10"]);
+const IGNORED_LINES = new Set(["Ramal de São Paulo", "Expresso Turístico", "Expresso Linha 10", "Linha Tronco (Estrada de Ferro Sorocabana)", "Variante de Poá"]);
 
 function normalizeLineLabel(label: string): LineId | undefined {
 	const raw = label
@@ -150,7 +150,7 @@ function normalizeLineLabel(label: string): LineId | undefined {
 	const m = raw.match(/^(\d{1,2})\b/);
 	if (m) return m[1];
 	if (IGNORED_LINES.has(label)) return undefined;
-	throw new Error(`Unknown line: ${raw}`);
+	throw new Error(`Unknown line: ${label}`);
 }
 
 const stationsCache: { base: Station[] | null; cptm: Station[] | null } = { base: null, cptm: null };
@@ -330,6 +330,16 @@ export async function loadAdjacencyGraph(_opts: { includeCPTM?: boolean } = {}):
 		loadAdjacencyCsv(adjUrl, "station", "adjacent_station"),
 		loadAdjacencyCsv(interUrl, "station", "interchange_station"),
 	]);
+
+	// HACK: Line 6 currently does not connect to the rest of the Metrô system without using CPTM
+	// So we manually add 1 connection to make it connected (which is theoretically cheating,
+	// since it uses Linha 7 - CPTM)
+	if (!includeCPTM) {
+		console.assert(!rawAdjacent.get("Q85817186")?.has("Q15265202"));
+		rawAdjacent.get("Q85817186")?.add("Q15265202");
+		rawAdjacent.get("Q15265202")?.add("Q85817186");
+	}
+
 
 	// Ensure we have the id→representative mapping for this mode
 	let idToRep = idToRepCache[cacheKey as keyof typeof idToRepCache];

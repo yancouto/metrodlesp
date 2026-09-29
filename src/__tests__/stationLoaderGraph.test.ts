@@ -8,7 +8,7 @@ beforeAll(async () => {
 	try {
 		vi.unmock("../stationLoader");
 		vi.unmock("../stationLoader.js");
-	} catch {}
+	} catch { }
 	// Minimal fetch mock: load local files from src when stationLoader requests CSVs
 	// Supports both file:// and normal URL strings
 	// @ts-ignore
@@ -231,6 +231,13 @@ async function assertStronglyConnected(includeCPTM: boolean) {
 	};
 	mergeIntoDirected(g.adjacent);
 	mergeIntoDirected(g.interchange);
+
+	for (const [u, adj_u] of directed) {
+		for (const v of adj_u) {
+			expect(directed.has(v)).toBe(true);
+			expect(directed.get(v)?.has(u)).toBe(true);
+		}
+	}
 
 	const sccs = findSCCs(directed);
 	// A strongly connected graph has exactly one SCC

@@ -12,6 +12,7 @@ export const LINES: Record<string, Line> = {
 	"3": { id: "3", name: "Linha 3-Vermelha", color: "#ee4034" },
 	"4": { id: "4", name: "Linha 4-Amarela", color: "#fed400" },
 	"5": { id: "5", name: "Linha 5-Lilás", color: "#794d9e" },
+	"6": { id: "6", name: "Linha 6-Laranja", color: "#f27918" },
 	"7": { id: "7", name: "Linha 7-Rubi", color: "#9f1765" },
 	"8": { id: "8", name: "Linha 8-Diamante", color: "#9e9e93" },
 	"9": { id: "9", name: "Linha 9-Esmeralda", color: "#00a78e" },
@@ -22,3 +23,4 @@ export const LINES: Record<string, Line> = {
 	"15": { id: "15", name: "Linha 15-Prata", color: "#848c8f" },
 	"17": { id: "17", name: "Linha 17-Ouro", color: "#f89734" },
 };
+

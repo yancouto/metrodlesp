@@ -23,8 +23,8 @@ export function arrayEquals<A>(a: A[], b: A[]): boolean {
 	return a.length === b.length && a.every((val, idx) => val === b[idx]);
 }
 
-export function pickDailyStation(dateKey: string, stations: Station[]): Station {
-	if (dateKey >= "2025-11-03") {
+export function pickDailyStation(dateKey: string, stations: Station[], includeCPTM: boolean): Station {
+	if (dateKey >= "2026-09-30" || (dateKey >= "2025-11-03" && dateKey <= "2026-09-28")) {
 		// Calculate the day number since a fixed epoch
 		const epoch = new Date("2025-11-01");
 		const today = new Date(dateKey);
@@ -48,6 +48,13 @@ export function pickDailyStation(dateKey: string, stations: Station[]): Station 
 
 		const shuffled = shuffleArray(stations, prng);
 		return shuffled[idxInCycle];
+		// We added more stations, so we need to pick this day manually to avoid changing it in the middle
+	} else if (dateKey == "2026-09-29") {
+		if (includeCPTM) {
+			return stations.find(s => s.name === "Ribeirão Pires")!;
+		} else {
+			return stations.find(s => s.name === "Santa Cruz")!;
+		}
 	} else if (dateKey >= "2025-10-25") {
 		const idx = oldHashString("metrodlesp8:" + dateKey);
 		return stations[idx % stations.length];

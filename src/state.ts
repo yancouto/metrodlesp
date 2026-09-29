@@ -51,7 +51,7 @@ export function loadIncludeCPTM(): boolean {
 export function saveIncludeCPTM(isEnabled: boolean) {
 	try {
 		localStorage.setItem(INCLUDE_CPTM_KEY, String(isEnabled));
-	} catch {}
+	} catch { }
 }
 
 export function loadCptmPromptSeen(): boolean {
@@ -65,7 +65,7 @@ export function loadCptmPromptSeen(): boolean {
 export function saveCptmPromptSeen() {
 	try {
 		localStorage.setItem(CPTM_PROMPT_SEEN_KEY, "1");
-	} catch {}
+	} catch { }
 }
 
 export function loadState(dateKey: string, stations: Station[], includeCPTM: boolean = false): GameState {
@@ -77,7 +77,7 @@ export function loadState(dateKey: string, stations: Station[], includeCPTM: boo
 				d.setDate(today.getDate() - i);
 				const debugDateKey = d.toISOString().slice(0, 10);
 				try {
-					const station = pickDailyStation(debugDateKey, stations);
+					const station = pickDailyStation(debugDateKey, stations, includeCPTM);
 					console.log(debugDateKey, station?.name, station?.id);
 				} catch (e) {
 					console.log(debugDateKey, "ERROR", e);
@@ -85,7 +85,7 @@ export function loadState(dateKey: string, stations: Station[], includeCPTM: boo
 			}
 		}
 	}
-	const solution = pickDailyStation(dateKey, stations);
+	const solution = pickDailyStation(dateKey, stations, includeCPTM);
 	if ((import.meta as any).env?.DEV) console.log("DEV", solution);
 	const key = includeCPTM ? STORAGE_KEY_CPTM : STORAGE_KEY;
 	const raw = localStorage.getItem(key);
@@ -95,7 +95,7 @@ export function loadState(dateKey: string, stations: Station[], includeCPTM: boo
 			if (state.dateKey === dateKey && state.solutionId === solution.id) {
 				return state;
 			}
-		} catch {}
+		} catch { }
 	}
 	const init: GameState = {
 		solutionId: solution.id,
